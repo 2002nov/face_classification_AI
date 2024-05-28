@@ -19,7 +19,18 @@ def process_frame(frame, face_cascade, printer_model):
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
     for (x, y, w, h) in faces:
         cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
-    cv2.putText(frame, printer_model, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+    
+    # Overlaying text
+    font_scale = 1.5
+    thickness = 3
+    text_color = (0, 255, 0)  # Green text
+    text_bg_color = (0, 0, 0)  # Black background for text
+    text_size, _ = cv2.getTextSize(printer_model, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+    text_x = 10
+    text_y = text_size[1] + 20  # Position it a bit below the top edge
+    # Ensure the text background is visible by creating a rectangle behind the text
+    cv2.rectangle(frame, (text_x - 5, text_y - text_size[1] - 5), (text_x + text_size[0] + 5, text_y + 5), text_bg_color, cv2.FILLED)
+    cv2.putText(frame, printer_model, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, thickness, cv2.LINE_AA)
     return frame
 
 def main():
@@ -42,6 +53,10 @@ def main():
     
     cap.release()
     cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
+
 
 if __name__ == "__main__":
     main()
