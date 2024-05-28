@@ -3,3 +3,4 @@ add 1 pic = yolo classify predict model=runs/classify/train2/weights/best.pt sou
 
 https://www.ssyoutube.com/watch?v=GhnKWAQ8OS0
 https://www.ssyoutube.com/watch?v=_yekFRWCLQo
+https://www.ssyoutube.com/watch?v=CKjhOoLMd9A
