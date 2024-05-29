@@ -1,62 +1,29 @@
-import cv2
-
-def initialize_video(video_path):
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        print("Error: Could not open video.")
-        exit()
-    return cap
-
-def load_haar_cascade(haar_cascade_path):
-    face_cascade = cv2.CascadeClassifier(haar_cascade_path)
-    if face_cascade.empty():
-        print("Error: Could not load Haar Cascade.")
-        exit()
-    return face_cascade
-
-def process_frame(frame, face_cascade, printer_model):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-    for (x, y, w, h) in faces:
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
-    
-    # Overlaying text
-    font_scale = 1.5
-    thickness = 3
-    text_color = (0, 255, 0)  # Green text
-    text_bg_color = (0, 0, 0)  # Black background for text
-    text_size, _ = cv2.getTextSize(printer_model, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-    text_x = 10
-    text_y = text_size[1] + 20  # Position it a bit below the top edge
-    # Ensure the text background is visible by creating a rectangle behind the text
-    cv2.rectangle(frame, (text_x - 5, text_y - text_size[1] - 5), (text_x + text_size[0] + 5, text_y + 5), text_bg_color, cv2.FILLED)
-    cv2.putText(frame, printer_model, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, thickness, cv2.LINE_AA)
-    return frame
-
-def main():
-    video_path = '/home/rvp/Work_Student2024/Bow/videotest03.mp4'
-    haar_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-    printer_model = "MFC-L5900DW"
-    
-    cap = initialize_video(video_path)
-    face_cascade = load_haar_cascade(haar_cascade_path)
-    
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if ret:
-            frame = process_frame(frame, face_cascade, printer_model)
-            cv2.imshow('Video', frame)
-            if cv2.waitKey(25) & 0xFF == ord('q'):
-                break
-        else:
-            break
-    
-    cap.release()
-    cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
+import cv2 as cv
+from ultralytics import YOLO
+import os
+import torch
+from torchvision import transforms
+from PIL import Image  # Add this import statement
 
 
-if __name__ == "__main__":
-    main()
+# Load YOLOv8 model
+detect_model = YOLO('/home/rvp/Work_Student2024/TrainAi/yolov8l-face.pt')
+classify_model = '/home/rvp/Work_Student2024/Bow/train15#/weights/best.pt'
+class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: 'Funny', 6: 'Happy', 7: 'Normal', 8: 'Proud', 9: 'Sad', 10: 'Scared', 11: 'Shy', 12: 'Sigh', 13: 'Superangry', 14: 'Surprised', 15: 'Suspicious', 16: 'Unhappy', 17: 'Worried', 18: 'sweet', 19: 'tricky'}
+
+
+# Define preprocessing transformation
+preprocess = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
+# Open video file
+cap = cv.VideoCapture('/home/rvp/Work_Student2024/Bow/คำต้องห้าม.mp4')
+
+# Create a directory to save the detected faces
+output_dir = '/home/rvp/Work_Student2024/Bow/picture'
+os.makedirs(output_dir, exist_ok=True)
+
+frame_counter = 0
