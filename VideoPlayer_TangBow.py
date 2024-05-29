@@ -70,7 +70,7 @@ class App:
                             self.frame += 1
                             self.update_counter(self.frame)
                             self.update_graph(top3_indices, top3_probs)
-                            self.update_image(faces, predict_results)
+                            self.update_image(faces)
 
         self.canvas.after(abs(int((self.delay - (time.time() - start_time)) * 1000)), self.update)
 
@@ -88,27 +88,14 @@ class App:
         self.window.Element("slider").Update(value=frame)
         self.window.Element("counter").Update("{}/{}".format(frame, self.frames))
 
-    def update_image(self, faces, predict_results):
-        """Update the image column with new faces and predictions"""
-        file_list_column = [
-            [sg.Text("Results")]
-        ]
-        for i in range(len(faces)):
-            img = Image.fromarray(cv2.cvtColor(faces[i], cv2.COLOR_BGR2RGB))
-            bio = BytesIO()
-            img.save(bio, format="PNG")
-            bio.seek(0)
-            face_image = sg.Image(data=bio.read(), size=(100, 100))  # Increased size for visibility
-            prediction_text = sg.Text(predict_results[i])
-            if i % 2 == 0:
-                file_list_column.append([face_image, prediction_text])
-            else:
-                file_list_column[-1].extend([face_image, prediction_text])
-
-        results_column = sg.Column(file_list_column, key="result_column", element_justification='center')
-        self.window.Element("result_column").Update(visible=False)
-        self.window.Element("result_column").Update(results_column)
-        self.window.Element("result_column").Update(visible=True)
+    def update_image(self, faces):
+        for i, face in enumerate(faces):
+            if i < 5:  # Example limit of 5 faces
+                img = Image.fromarray(cv2.cvtColor(face, cv2.COLOR_BGR2RGB))
+                bio = BytesIO()
+                img.save(bio, format="PNG")
+                bio.seek(0)
+                self.window[f"selected_face_{i}"].update(data=bio.read())
 
     def init_graph(self):
         plt.rcParams.update({'font.size': 8}) 
@@ -166,20 +153,16 @@ class App:
             [sg.Column([[sg.Canvas(size=(500, 300), key="graph_canvas")]], size=(500, 300), key="graph_canvas")],
         ]
 
-        # Create empty placeholders for face images and predictions
-        face_prediction_columns = [
-            [sg.Image(key=f"face_{i}", size=(10, 10)), sg.Text(key=f"prediction_{i}", size=(20, 1))]
-            for i in range(20)  # Adjust the range according to the maximum number of faces you expect
+        empty_container_column = [
+            [sg.Text("Detected Faces")],
+            [sg.Image(key=f"selected_face_{i}", size=(100, 100), background_color="black") for i in range(5)]  # Example of 5 slots
         ]
-
-        results_column = sg.Column([[sg.Text("Results")]], key="result_column", element_justification='center')
 
         layout = [
             [
                 sg.Menu(menu_def),
-                results_column,
-                face_prediction_columns,
                 sg.Column(video_play_column, element_justification='center'),
+                sg.Column(empty_container_column, key="empty_container", element_justification='center')
             ]
         ]
 
@@ -270,4 +253,3 @@ class MyVideoCapture:
 
 if __name__ == '__main__':
     App()
-
