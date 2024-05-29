@@ -70,7 +70,7 @@ class App:
                             self.frame += 1
                             self.update_counter(self.frame)
                             self.update_graph(top3_indices, top3_probs)
-                            self.update_image(faces)
+                    self.update_image(faces)
 
         self.canvas.after(abs(int((self.delay - (time.time() - start_time)) * 1000)), self.update)
 
@@ -89,11 +89,19 @@ class App:
         self.window.Element("counter").Update("{}/{}".format(frame, self.frames))
 
     def update_image(self, faces):
-        for i, face in enumerate(faces):
-            if i < 5:  # Example limit of 5 faces
+        for i in range(20):  # Ensure 20 containers are updated
+            if i < len(faces):
+                face = faces[i]
                 img = Image.fromarray(cv2.cvtColor(face, cv2.COLOR_BGR2RGB))
                 bio = BytesIO()
                 img.save(bio, format="PNG")
+                bio.seek(0)
+                self.window[f"selected_face_{i}"].update(data=bio.read())
+            else:
+                # Update with a black image if there are no faces
+                black_img = Image.new("RGB", (100, 100), (0, 0, 0))
+                bio = BytesIO()
+                black_img.save(bio, format="PNG")
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
 
@@ -155,7 +163,7 @@ class App:
 
         empty_container_column = [
             [sg.Text("Detected Faces")],
-            [sg.Image(key=f"selected_face_{i}", size=(100, 100), background_color="black") for i in range(5)]  # Example of 5 slots
+            [sg.Image(key=f"selected_face_{i}", size=(100, 100), background_color="black") for i in range(20)]  # Example of 20 slots
         ]
 
         layout = [
