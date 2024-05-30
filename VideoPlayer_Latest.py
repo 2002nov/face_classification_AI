@@ -5,8 +5,6 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import cv2
 import PySimpleGUI as sg
-import os
-from PIL import ImageFont, ImageDraw
 from io import BytesIO
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -45,9 +43,7 @@ class App:
                         boxes = r.boxes
                         for i, box in enumerate(boxes):
                             x1, y1, x2, y2 = map(int, box.xyxy[0])
-                            conf = box.conf[0]
-                            cls = box.cls[0]
-                            label = f"face {i}"
+                            label = f"face {i+1}"
                             
                             cv2.rectangle(frame, (x1-20, y1-20), (x2+20, y2+20), (0, 255, 0), 2)
                             cv2.putText(frame, label, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
@@ -65,16 +61,16 @@ class App:
                             top3_indices_list.append(top3_indices)
                             top3_probs_list.append(top3_probs)
 
-                            print("Prediction face",i, " : " , prediction)
-                            self.window.Element("prediction").Update(f"Prediction: {prediction}", font=("Calibri", 12))
+                            print("Prediction face", i, ":", prediction)
+                            self.window.Element("prediction").Update(f"Prediction: face 0", font=("Calibri", 12))
 
                             self.photo = ImageTk.PhotoImage(
                                 image=Image.fromarray(frame).resize((self.vid_width, self.vid_height), Image.NEAREST)
                             )
                    
                     self.update_graph(top3_indices_list, top3_probs_list)
-                    self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW) # play frame
-                    self.update_image(faces,predict_results)
+                    self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)  # play frame
+                    self.update_image(faces, predict_results)
                     self.frame += 1
                     self.update_counter(self.frame)
 
@@ -92,7 +88,7 @@ class App:
 
     def update_counter(self, frame):
         self.window.Element("slider").Update(value=frame)
-        self.window.Element("counter").Update("{}/{}".format(frame, self.frames))
+        self.window.Element("counter").Update(f"{frame}/{self.frames}")
 
     def update_image(self, faces, predict_results):
         for i in range(20):  # Ensure 20 containers are updated
@@ -103,7 +99,7 @@ class App:
                 img.save(bio, format="PNG")
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
-                self.window[f"predicted_face_{i}"].update(value=f"face {i}: {predict_results[i]}")
+                self.window[f"predicted_face_{i}"].update(value=f"face {i+1}: {predict_results[i]}")
             else:
                 # Update with a black image if there are no faces
                 black_img = Image.new("RGB", (40, 40), (0, 0, 0))
@@ -111,7 +107,7 @@ class App:
                 black_img.save(bio, format="PNG")
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
-                self.window[f"predicted_face_{i}"].update(value=f"face {i}: not detected")
+                self.window[f"predicted_face_{i}"].update(value=f"face {i+1}: not detected")
 
     def init_graph(self):
         plt.rcParams.update({'font.size': 8}) 
@@ -133,7 +129,6 @@ class App:
     def update_graph(self, top3_indices_list, top3_probs_list):
         # This assumes you want to plot the top probabilities of the first detected face
         if len(top3_indices_list) > 0:
-            top3_indices = top3_indices_list[0]
             top3_probs = top3_probs_list[0]
 
             self.x_data.append(self.frame)
@@ -156,12 +151,9 @@ class App:
         self.frames = None
         self.vid = None
         self.photo = None
-        self.next = "1"
-        self.lx = 0
-        self.ly = 0
 
         menu_def = [['&File', ['&Open', '&Save', '---', 'Properties', 'E&xit']],
-                    ['&Edit', ['Paste', ['Special', 'Normal', ], 'Undo'], ],
+                    ['&Edit', ['Paste', ['Special', 'Normal'], 'Undo']],
                     ['&Help', '&About...']]
       
         video_play_column = [
@@ -175,10 +167,10 @@ class App:
         ]
 
         empty_container_column = [
-            [sg.Text("Detected Faces")],
+            [sg.Text("Detected Faces", font=("Helvetica", 14))],
             *[
-                [sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), sg.Text(f"face {i}: not detected", key=f"predicted_face_{i}"),
-                sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), sg.Text(f"face {i+1}: not detected", key=f"predicted_face_{i+1}")] 
+                [sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), sg.Text(f"face {i+1}: not detected", key=f"predicted_face_{i}"),
+                sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), sg.Text(f"face {i+2}: not detected", key=f"predicted_face_{i+1}")] 
                 for i in range(0, 20, 2)
             ]
         ]
@@ -217,7 +209,7 @@ class App:
                     self.vid_height = int(self.vid_width * self.vid.height / self.vid.width)
                     self.frames = int(self.vid.frames)
                     self.window.Element("slider").Update(range=(0, int(self.frames)), value=0)
-                    self.window.Element("counter").Update("0/%i" % self.frames)
+                    self.window.Element("counter").Update(f"0/{self.frames}")
                     self.canvas.config(width=self.vid_width, height=self.vid_height)
                     self.frame = 0
                     self.delay = 1 / self.vid.fps
