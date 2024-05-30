@@ -47,7 +47,7 @@ class App:
                             label = f"face {i}"
                             
                             cv2.rectangle(frame, (x1-20, y1-20), (x2+20, y2+20), (0, 255, 0), 2)
-                            cv2.putText(frame, label, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+                            cv2.putText(frame, label, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
                             face = frame[y1:y2, x1:x2]
                             faces.append(face)
 
@@ -59,7 +59,7 @@ class App:
                             top3_indices = results[0].probs.data.cpu().topk(3).indices.numpy()
                             top3_probs = results[0].probs.data.cpu().topk(3).values.numpy()
 
-                            print("Prediction:", prediction)
+                            print("Prediction face",i, " : " , prediction)
                             self.window.Element("prediction").Update(f"Prediction: {prediction}", font=("Calibri", 12))
 
                             self.photo = ImageTk.PhotoImage(
@@ -96,7 +96,7 @@ class App:
                 img.save(bio, format="PNG")
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
-                self.window[f"predicted_face_{i}"].update(value=predict_results[i])
+                self.window[f"predicted_face_{i}"].update(value=f"face {i}: {predict_results[i]}")
             else:
                 # Update with a black image if there are no faces
                 black_img = Image.new("RGB", (40, 40), (0, 0, 0))
@@ -104,7 +104,7 @@ class App:
                 black_img.save(bio, format="PNG")
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
-                self.window[f"predicted_face_{i}"].update(value=f"face {i}")
+                self.window[f"predicted_face_{i}"].update(value=f"face {i}: not detected")
 
     def init_graph(self):
         plt.rcParams.update({'font.size': 8}) 
@@ -165,8 +165,8 @@ class App:
         empty_container_column = [
             [sg.Text("Detected Faces")],
             *[
-                [sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), sg.Text(f"face {i}", key=f"predicted_face_{i}"),
-                sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), sg.Text(f"face {i+1}", key=f"predicted_face_{i+1}")] 
+                [sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), sg.Text(f"face {i}: not detected", key=f"predicted_face_{i}"),
+                sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), sg.Text(f"face {i+1}: not detected", key=f"predicted_face_{i+1}")] 
                 for i in range(0, 20, 2)
             ]
         ]
