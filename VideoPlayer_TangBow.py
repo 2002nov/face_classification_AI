@@ -34,9 +34,12 @@ class App:
             if self.play:
                 ret, frame = self.vid.get_frame()
                 if ret:
-                    detects = modelDetection(frame)
                     faces = []
                     predict_results = []
+                    top3_indices_list = []
+                    top3_probs_list = []
+
+                    detects = modelDetection(frame)
 
                     for r in detects:
                         boxes = r.boxes
@@ -59,14 +62,18 @@ class App:
                             top3_indices = results[0].probs.data.cpu().topk(3).indices.numpy()
                             top3_probs = results[0].probs.data.cpu().topk(3).values.numpy()
 
+                            top3_indices_list.append(top3_indices)
+                            top3_probs_list.append(top3_probs)
+
                             print("Prediction face",i, " : " , prediction)
                             self.window.Element("prediction").Update(f"Prediction: {prediction}", font=("Calibri", 12))
 
                             self.photo = ImageTk.PhotoImage(
                                 image=Image.fromarray(frame).resize((self.vid_width, self.vid_height), Image.NEAREST)
                             )
-                            self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
-                            self.update_graph(top3_indices, top3_probs)
+                   
+                    self.update_graph(top3_indices_list, top3_probs_list)
+                    self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW) # play frame
                     self.update_image(faces,predict_results)
                     self.frame += 1
                     self.update_counter(self.frame)
@@ -123,19 +130,24 @@ class App:
         self.y_data2 = []
         self.y_data3 = []
 
-    def update_graph(self, top3_indices, top3_probs):
-        self.x_data.append(self.frame)
-        self.y_data1.append(top3_probs[0])
-        self.y_data2.append(top3_probs[1])
-        self.y_data3.append(top3_probs[2])
+    def update_graph(self, top3_indices_list, top3_probs_list):
+        # This assumes you want to plot the top probabilities of the first detected face
+        if len(top3_indices_list) > 0:
+            top3_indices = top3_indices_list[0]
+            top3_probs = top3_probs_list[0]
 
-        self.line1.set_data(self.x_data, self.y_data1)
-        self.line2.set_data(self.x_data, self.y_data2)
-        self.line3.set_data(self.x_data, self.y_data3)
+            self.x_data.append(self.frame)
+            self.y_data1.append(top3_probs[0])
+            self.y_data2.append(top3_probs[1])
+            self.y_data3.append(top3_probs[2])
 
-        self.ax.relim()
-        self.ax.autoscale_view()
-        self.graph_canvas.draw()
+            self.line1.set_data(self.x_data, self.y_data1)
+            self.line2.set_data(self.x_data, self.y_data2)
+            self.line3.set_data(self.x_data, self.y_data3)
+
+            self.ax.relim()
+            self.ax.autoscale_view()
+            self.graph_canvas.draw()
 
     def __init__(self):
         self.play = True
