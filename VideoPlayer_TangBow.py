@@ -68,7 +68,7 @@ class App:
                             )
                             #self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
                             self.update_graph(top3_indices, top3_probs)
-                    self.update_image(faces)
+                    self.update_image(faces,predict_results)
                     self.frame += 1
                     self.update_counter(self.frame)
 
@@ -88,11 +88,11 @@ class App:
         self.window.Element("slider").Update(value=frame)
         self.window.Element("counter").Update("{}/{}".format(frame, self.frames))
 
-    def update_image(self, faces):
+    def update_image(self, faces, predict_results):
         for i in range(20):  # Ensure 20 containers are updated
             if i < len(faces):
                 face = faces[i]
-                img = Image.fromarray(face)
+                img = Image.fromarray(cv2.resize(face, (40, 40)))
                 bio = BytesIO()
                 img.save(bio, format="PNG")
                 bio.seek(0)
