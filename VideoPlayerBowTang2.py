@@ -66,6 +66,19 @@ class App:
 #------------------------------------------------------------------------------------------------------------
                     cv2.putText(frame,f"Hello", (1150, 600), cv2.FONT_HERSHEY_SIMPLEX, 1,(0, 0, 0), 2,cv2.LINE_AA)
 #------------------------------------------------------------------------------------------------------------
+                    # Extract the detected face region
+                    x1, y1, x2, y2 = map(int, results[0].boxes.xyxy[0])
+                    detected_face = frame[y1:y2, x1:x2]
+
+                    # Resize the detected face to match the example image size
+                    resized_face = cv2.resize(detected_face, (80, 80))
+
+                    # Convert the resized face to ImageTk format
+                    face_image = ImageTk.PhotoImage(image=Image.fromarray(resized_face))
+
+                    # Update the GUI with the resized face image
+                    self.window.Element("face_output").Update(data=face_image)
+#------------------------------------------------------------------------------------------------------------
                     # อัปเดตองค์ประกอบ text ใน GUI ด้วยผลการทำนาย
                     self.window.Element("prediction").Update(f"Prediction: {prediction}", font=("Calibri", 12))
 
@@ -130,6 +143,22 @@ class App:
         self.ax.autoscale_view()
 
         self.graph_canvas.draw()
+    def resize_image(self, input_image_path, output_image_size=(40, 40)):
+        """Resize the image to the specified size"""
+        image = Image.open(input_image_path)
+        image = image.resize(output_image_size, Image.ANTIALIAS)
+        bio = BytesIO()
+        image.save(bio, format="PNG")
+        return bio.getvalue()
+    def update_image_list(self):
+        """Update the images in the file list column"""
+        folder = r"/home/rvp/Work_Student2024/video/class/Classes"
+        png_files = [folder + '/' + f for f in os.listdir(folder) if '.png' in f]
+        for i, file in enumerate(png_files):
+            if i >= 10:
+                break
+            resized_image = self.resize_image(file, (80, 80))  # Update the size as needed
+            self.window[(i, 0)].Update(data=resized_image)
 #------------------------------------------------------------------------------------------------------------
     def __init__(self):
         # ------ App states ------ #
@@ -218,6 +247,8 @@ class App:
 #------------------------------------------------------------------------------------------------------------
         # Start video display thread
         self.load_video()
+        # Update the image list periodically or based on some condition
+        self.update_image_list()
 
         while True:  # Main event Loop
             event, values = self.window.Read(timeout=100)
@@ -329,6 +360,10 @@ class MyVideoCapture:
     def __del__(self):
         if self.vid.isOpened():
             self.vid.release()
+
+
+if __name__ == '__main__':
+    App()
 
 
 if __name__ == '__main__':
