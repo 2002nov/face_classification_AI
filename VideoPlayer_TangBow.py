@@ -40,15 +40,14 @@ class App:
 
                     for r in detects:
                         boxes = r.boxes
-                        for box in boxes:
+                        for i, box in enumerate(boxes):
                             x1, y1, x2, y2 = map(int, box.xyxy[0])
                             conf = box.conf[0]
                             cls = box.cls[0]
-                            label = f"{modelDetection.names[int(cls)]} {conf:.2f}"
+                            label = f"face {i}"
                             
                             cv2.rectangle(frame, (x1-20, y1-20), (x2+20, y2+20), (0, 255, 0), 2)
-                            cv2.putText(frame, label, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
+                            cv2.putText(frame, label, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
                             face = frame[y1:y2, x1:x2]
                             faces.append(face)
 
@@ -66,7 +65,7 @@ class App:
                             self.photo = ImageTk.PhotoImage(
                                 image=Image.fromarray(frame).resize((self.vid_width, self.vid_height), Image.NEAREST)
                             )
-                            #self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
+                            self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
                             self.update_graph(top3_indices, top3_probs)
                     self.update_image(faces,predict_results)
                     self.frame += 1
@@ -97,6 +96,7 @@ class App:
                 img.save(bio, format="PNG")
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
+                self.window[f"predicted_face_{i}"].update(value=predict_results[i])
             else:
                 # Update with a black image if there are no faces
                 black_img = Image.new("RGB", (40, 40), (0, 0, 0))
@@ -104,6 +104,7 @@ class App:
                 black_img.save(bio, format="PNG")
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
+                self.window[f"predicted_face_{i}"].update(value=f"face {i}")
 
     def init_graph(self):
         plt.rcParams.update({'font.size': 8}) 
@@ -164,8 +165,8 @@ class App:
         empty_container_column = [
             [sg.Text("Detected Faces")],
             *[
-                [sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), 
-                 sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black")] 
+                [sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), sg.Text(f"face {i}", key=f"predicted_face_{i}"),
+                sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), sg.Text(f"face {i+1}", key=f"predicted_face_{i+1}")] 
                 for i in range(0, 20, 2)
             ]
         ]
