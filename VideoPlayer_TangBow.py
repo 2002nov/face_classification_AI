@@ -92,14 +92,14 @@ class App:
         for i in range(20):  # Ensure 20 containers are updated
             if i < len(faces):
                 face = faces[i]
-                img = Image.fromarray(cv2.cvtColor(face, cv2.COLOR_BGR2RGB))
+                img = Image.fromarray(face)
                 bio = BytesIO()
                 img.save(bio, format="PNG")
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
             else:
                 # Update with a black image if there are no faces
-                black_img = Image.new("RGB", (100, 100), (0, 0, 0))
+                black_img = Image.new("RGB", (40, 40), (0, 0, 0))
                 bio = BytesIO()
                 black_img.save(bio, format="PNG")
                 bio.seek(0)
