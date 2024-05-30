@@ -66,11 +66,11 @@ class App:
                             self.photo = ImageTk.PhotoImage(
                                 image=Image.fromarray(frame).resize((self.vid_width, self.vid_height), Image.NEAREST)
                             )
-                            self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
-                            self.frame += 1
-                            self.update_counter(self.frame)
+                            #self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
                             self.update_graph(top3_indices, top3_probs)
                     self.update_image(faces)
+                    self.frame += 1
+                    self.update_counter(self.frame)
 
         self.canvas.after(abs(int((self.delay - (time.time() - start_time)) * 1000)), self.update)
 
@@ -163,14 +163,18 @@ class App:
 
         empty_container_column = [
             [sg.Text("Detected Faces")],
-            [sg.Image(key=f"selected_face_{i}", size=(100, 100), background_color="black") for i in range(20)]  # Example of 20 slots
+            *[
+                [sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), 
+                 sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black")] 
+                for i in range(0, 20, 2)
+            ]
         ]
 
         layout = [
             [
                 sg.Menu(menu_def),
+                sg.Column(empty_container_column, key="empty_container", element_justification='center'),
                 sg.Column(video_play_column, element_justification='center'),
-                sg.Column(empty_container_column, key="empty_container", element_justification='center')
             ]
         ]
 
