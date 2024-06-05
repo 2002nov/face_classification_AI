@@ -42,6 +42,8 @@ class App:
                     predict_results = []
                     top3_indices_list = []
                     top3_probs_list = []
+                    self.individuals = {}  # Initialize individuals dictionary for each frame
+                    self.pose_id = 0  # Reset pose ID for each frame
 
                     detects = modelDetection(frame)
 
@@ -67,8 +69,9 @@ class App:
                             top3_indices_list.append(top3_indices)
                             top3_probs_list.append(top3_probs)
 
-                            print("Prediction face", i, ":", prediction)
-                            self.window.Element("prediction").Update(f"Prediction: face {i}", font=("Calibri", 12))
+                            self.individuals[i] = {'face_box': (x1, y1, x2, y2), 'pose': None}
+
+                            print(f"Face {i+1}: {prediction}")
 
                     self.update_image(faces, predict_results)
 
@@ -80,6 +83,8 @@ class App:
                         for i, box in enumerate(boxes):
                             x1, y1, x2, y2 = map(int, box.xyxy[0])
                             person_region = frame[y1:y2, x1:x2]
+                            label = f"pose {i+1}"
+                            cv2.putText(frame, label, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
 
                             # Pose Estimation using MediaPipe for each person detected
                             results = pose.process(cv2.cvtColor(person_region, cv2.COLOR_BGR2RGB))
@@ -91,6 +96,7 @@ class App:
                                     mp.solutions.drawing_utils.DrawingSpec(color=(255, 0, 255), thickness=2, circle_radius=5),
                                     mp.solutions.drawing_utils.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=5)
                                 )
+                                self.assign_pose_to_individual((x1, y1, x2, y2), results.pose_landmarks)
 
                             # Place the processed region back into the frame
                             frame[y1:y2, x1:x2] = person_region
@@ -104,6 +110,19 @@ class App:
                     self.update_counter(self.frame)
 
         self.canvas.after(abs(int((self.delay - (time.time() - start_time)) * 1000)), self.update)
+
+    def assign_pose_to_individual(self, person_box, pose_landmarks):
+        self.pose_id += 1  # Increment pose ID for each detected pose
+        for individual_id, individual in self.individuals.items():
+            face_box = individual['face_box']
+            if self.is_within(face_box, person_box):
+                self.individuals[individual_id]['pose'] = pose_landmarks
+                # Print to confirm matching
+                print(f"Pose {self.pose_id} matched with Face {individual_id + 1}")
+                break  # Once matched, no need to check other individuals
+
+    def is_within(self, box1, box2):
+        return (box1[0] < box2[2] and box1[2] > box2[0] and box1[1] < box2[3] and box1[3] > box2[1])
 
     def set_frame(self, frame_no):
         if self.vid:
