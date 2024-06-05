@@ -22,7 +22,7 @@ class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: '
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
-pose = mp_pose.Pose()
+pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, model_complexity=1)
 
 class App:
     def load_video(self):
@@ -73,12 +73,13 @@ class App:
                     results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                     skeletons = []
                     if results.pose_landmarks:
-                        skeleton = []
-                        for landmark in results.pose_landmarks.landmark:
-                            skeleton.append((int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])))
-                        skeletons.append(skeleton)
-                        mp.solutions.drawing_utils.draw_landmarks(
-                            frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+                        for pose_landmarks in results.pose_landmarks:
+                            skeleton = []
+                            for landmark in pose_landmarks.landmark:
+                                skeleton.append((int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])))
+                            skeletons.append(skeleton)
+                            mp.solutions.drawing_utils.draw_landmarks(
+                                frame, pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
                     # Match faces to skeletons
                     for i, (x1, y1, x2, y2) in enumerate([map(int, box.xyxy[0]) for r in detects for box in r.boxes]):
