@@ -1,0 +1,66 @@
+import mediapipe as mp
+
+# Initialize MediaPipe Pose
+# เพิ่มการตรวจจับ Skeleton
+# เราจะเริ่มโดยการเพิ่มการใช้งาน MediaPipe Pose:
+mp_pose = mp.solutions.pose
+pose = mp_pose.Pose()
+
+# แก้ไขฟังก์ชัน update เพื่อรวมการตรวจจับ skeleton
+# นี่คือเวอร์ชันที่ปรับปรุงของฟังก์ชัน update ที่รวมการตรวจจับ skeleton
+def update(self):
+    start_time = time.time()
+
+    if self.vid:
+        if self.play:
+            ret, frame = self.vid.get_frame()
+            if ret:
+                faces = []
+                predict_results = []
+                top3_indices_list = []
+                top3_probs_list = []
+
+                # ตรวจจับใบหน้า
+                detects = modelDetection(frame)
+
+                for r in detects:
+                    boxes = r.boxes
+                    for i, box in enumerate(boxes):
+                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        label = f"face {i+1}"
+                        
+                        cv2.rectangle(frame, (x1-20, y1-20), (x2+20, y2+20), (0, 255, 0), 2)
+                        cv2.putText(frame, label, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
+                        face = frame[y1:y2, x1:x2]
+                        faces.append(face)
+
+                        results = modelClassify.predict(face)
+                        prediction_idx = results[0].probs.data.cpu().numpy().argmax()
+                        prediction = class_dict[prediction_idx]
+                        predict_results.append(prediction)
+
+                        top3_indices = results[0].probs.data.cpu().topk(3).indices.numpy()
+                        top3_probs = results[0].probs.data.cpu().topk(3).values.numpy()
+
+                        top3_indices_list.append(top3_indices)
+                        top3_probs_list.append(top3_probs)
+
+                        print("Prediction face", i, ":", prediction)
+                        self.window.Element("prediction").Update(f"Prediction: face {i}", font=("Calibri", 12))
+
+                # ตรวจจับ skeleton
+                results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                if results.pose_landmarks:
+                    mp.solutions.drawing_utils.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+
+                # เชื่อมโยงใบหน้ากับ skeleton
+                # (ในส่วนนี้ควรเขียนฟังก์ชันเพื่อเชื่อมโยงใบหน้าที่ตรวจจับได้กับ skeleton ที่ใกล้เคียงที่สุด)
+                
+                self.photo = ImageTk.PhotoImage(
+                    image=Image.fromarray(frame).resize((self.vid_width, self.vid_height), Image.NEAREST)
+                )
+                
+                self.update_graph(top3_indices_list, top3_probs_list)
+
+                self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
+                self.window.Element("progress").UpdateBar(time.time() - start_time)
