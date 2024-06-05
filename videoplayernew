@@ -1,3 +1,8 @@
+  File "videoplayernew.py", line 76, in update
+    for pose_landmarks in results.pose_landmarks:
+TypeError: 'NormalizedLandmarkList' object is not iterable
+
+
 import sys
 import threading
 import time
