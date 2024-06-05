@@ -1,3 +1,4 @@
+#ต้อง crop เป็นคนมาก่อนถึงจะ media pipe
 import sys
 import threading
 import time
