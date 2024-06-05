@@ -1,3 +1,10 @@
+File "/home/lab_brownien/anaconda3/envs/yolov8/lib/python3.8/tkinter/__init__.py", line 814, in callit
+    func(*args)
+  File "videoplayernew.py", line 76, in update
+    for pose_landmarks in results.pose_landmarks:
+TypeError: 'NormalizedLandmarkList' object is not iterable
+
+
 import sys
 import threading
 import time
