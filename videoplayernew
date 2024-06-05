@@ -30,19 +30,21 @@ class App:
         thread = threading.Thread(target=self.update, args=())
         thread.daemon = 1
         thread.start()
-
+# เริ่มต้นการจับเวลา:ฟังก์ชันเริ่มต้นด้วยการบันทึกเวลาปัจจุบันเพื่อคำนวณระยะเวลาในการประมวลผลเฟรม
     def update(self):
         start_time = time.time()
 
+# ตรวจสอบว่ามีการเล่นวิดีโอหรือไม่
         if self.vid:
             if self.play:
+# ดึงเฟรมถัดไปจากวิดีโอ
                 ret, frame = self.vid.get_frame()
                 if ret:
                     faces = []
                     predict_results = []
                     top3_indices_list = []
                     top3_probs_list = []
-
+# การตรวจจับใบหน้า:
                     detects = modelDetection(frame)
 
                     for r in detects:
@@ -70,7 +72,7 @@ class App:
                             print("Prediction face", i, ":", prediction)
                             self.window.Element("prediction").Update(f"Prediction: face {i}", font=("Calibri", 12))
 
-                    # Detect skeletons
+                    # Detect skeletons การตรวจจับโครงร่าง (Skeleton):
                     results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                     skeletons = []
                     if results.pose_landmarks:
@@ -81,14 +83,14 @@ class App:
                         mp.solutions.drawing_utils.draw_landmarks(
                             frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
-                    # Match faces to skeletons
+                    # Match faces to skeletons การจับคู่ใบหน้ากับโครงร่าง:
                     for i, (x1, y1, x2, y2) in enumerate([map(int, box.xyxy[0]) for r in detects for box in r.boxes]):
                         face_center = ((x1 + x2) // 2, (y1 + y2) // 2)
                         if skeletons:
                             closest_skeleton = min(skeletons, key=lambda skel: (skel[0][0] - face_center[0])**2 + (skel[0][1] - face_center[1])**2)
                             cv2.circle(frame, closest_skeleton[0], 5, (255, 0, 0), -1)
                             cv2.line(frame, face_center, closest_skeleton[0], (255, 0, 0), 2)
-
+# อัปเดต GUI:
                     self.photo = ImageTk.PhotoImage(
                         image=Image.fromarray(frame).resize((self.vid_width, self.vid_height), Image.NEAREST)
                     )
@@ -98,7 +100,7 @@ class App:
                     self.update_image(faces, predict_results)
                     self.frame += 1
                     self.update_counter(self.frame)
-
+# กำหนดการอัปเดตครั้งถัดไป:
         self.canvas.after(abs(int((self.delay - (time.time() - start_time)) * 1000)), self.update)
 
     def set_frame(self, frame_no):
