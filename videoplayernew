@@ -70,23 +70,23 @@ class App:
                             print("Prediction face", i, ":", prediction)
                             self.window.Element("prediction").Update(f"Prediction: face {i}", font=("Calibri", 12))
 
-                    # Pose Estimation using MediaPipe
-                    results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                    if results.pose_landmarks:
-                        mp.solutions.drawing_utils.draw_landmarks(
-                            frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+                    # Detect people using YOLO
+                    people_detects = modelPose(frame)
 
-                    # Skeleton detection using YOLO
-                    pose_detects = modelPose(frame)
-                    for detect in pose_detects:
-                        if detect.keypoints is not None:
-                            for person in detect.keypoints:
-                                for keypoint in person:
-                                    if len(keypoint) == 3:
-                                        x, y, conf = keypoint
-                                        if conf > 0.5:  # Confidence threshold
-                                            cv2.circle(frame, (int(x), int(y)), 4, (0, 255, 0), -1)
-                                            cv2.putText(frame, f"{conf:.2f}", (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    for r in people_detects:
+                        boxes = r.boxes
+                        for i, box in enumerate(boxes):
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            person_region = frame[y1:y2, x1:x2]
+
+                            # Pose Estimation using MediaPipe for each person detected
+                            results = pose.process(cv2.cvtColor(person_region, cv2.COLOR_BGR2RGB))
+                            if results.pose_landmarks:
+                                mp.solutions.drawing_utils.draw_landmarks(
+                                    person_region, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+
+                            # Place the processed region back into the frame
+                            frame[y1:y2, x1:x2] = person_region
 
                     self.update_graph(top3_indices_list, top3_probs_list)
                     self.photo = ImageTk.PhotoImage(
