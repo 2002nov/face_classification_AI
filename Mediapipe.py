@@ -1,107 +1,94 @@
-import cv2 as cv
-from ultralytics import YOLO
-import mediapipe as mp
+import tensorflow as tf
+import tensorflow_hub as hub
+import cv2
 import numpy as np
 
-# Load YOLOv8 model for face detection
-detect_model = YOLO('/Users/bowbell/Desktop/face ai/yolov8l-face.pt')
+def loop_through_people(frame, keypoints_with_scores, edges, confidence_threshold):
+    for person in keypoints_with_scores:
+        draw_connections(frame, person, edges, confidence_threshold)
+        draw_keypoints(frame, person, confidence_threshold)
 
-# Define class dictionary for classification
-class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: 'Funny', 6: 'Happy', 7: 'Normal', 8: 'Proud', 9: 'Sad', 10: 'Scared', 11: 'Shy', 12: 'Sigh', 13: 'Superangry', 14: 'Surprised', 15: 'Suspicious', 16: 'Unhappy', 17: 'Worried', 18: 'sweet', 19: 'tricky'}
+def draw_keypoints(frame, keypoints, confidence_threshold):
+    y, x, _ = frame.shape
+    shaped = np.squeeze(np.multiply(keypoints, [y, x, 1]))
+    
+    for kp in shaped:
+        ky, kx, kp_conf = kp
+        if kp_conf > confidence_threshold:
+            cv2.circle(frame, (int(kx), int(ky)), 4, (0, 255, 0), -1)
 
-class_predict = []
+def draw_connections(frame, keypoints, edges, confidence_threshold):
+    y, x, _ = frame.shape
+    shaped = np.squeeze(np.multiply(keypoints, [y, x, 1]))
+    
+    for edge, color in edges.items():
+        p1, p2 = edge
+        y1, x1, c1 = shaped[p1]
+        y2, x2, c2 = shaped[p2]
+        
+        if (c1 > confidence_threshold) & (c2 > confidence_threshold):      
+            cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
 
-# Initialize MediaPipe face mesh
-mp_face_mesh = mp.solutions.face_mesh
-face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, min_detection_confidence=0.5)
-mp_drawing = mp.solutions.drawing_utils
-drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
+# Load MoveNet model
+print("Loading model...")
+model = hub.load('https://tfhub.dev/google/movenet/multipose/lightning/1')
+movenet = model.signatures['serving_default']
+print("Model loaded.")
 
-# Initialize MediaPipe pose
-mp_pose = mp.solutions.pose
-pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+# Define edges for drawing connections
+EDGES = {
+    (0, 1): 'm',
+    (0, 2): 'c',
+    (1, 3): 'm',
+    (2, 4): 'c',
+    (0, 5): 'm',
+    (0, 6): 'c',
+    (5, 7): 'm',
+    (7, 9): 'm',
+    (6, 8): 'c',
+    (8, 10): 'c',
+    (5, 6): 'y',
+    (5, 11): 'm',
+    (6, 12): 'c',
+    (11, 12): 'y',
+    (11, 13): 'm',
+    (13, 15): 'm',
+    (12, 14): 'c',
+    (14, 16): 'c'
+}
 
 # Open video file
-cap = cv.VideoCapture('/Users/bowbell/Desktop/face ai/คำต้องห้าม.mp4')
+print("Opening video file...")
+cap = cv2.VideoCapture('/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/TestVideo/novak.mp4')
+if not cap.isOpened():
+    print("Error: Could not open video.")
+    exit()
 
-frame_counter = 0
-
+print("Processing video...")
 while cap.isOpened():
-    face_counter = 0  # Counter for detected faces
-    faces = []
-
     ret, frame = cap.read()
-    
     if not ret:
-        print("Can't receive frame (stream end?). Exiting ...")
+        print("End of video or error.")
+        break
+    
+    # Resize image
+    img = frame.copy()
+    img = tf.image.resize_with_pad(tf.expand_dims(img, axis=0), 384, 640)
+    input_img = tf.cast(img, dtype=tf.int32)
+    
+    # Detection section
+    results = movenet(input_img)
+    keypoints_with_scores = results['output_0'].numpy()[:, :, :51].reshape((6, 17, 3))
+    
+    # Render keypoints 
+    loop_through_people(frame, keypoints_with_scores, EDGES, 0.1)
+    
+    cv2.imshow('Movenet Multipose', frame)
+    
+    if cv2.waitKey(10) & 0xFF == ord('q'):
+        print("Video processing interrupted by user.")
         break
 
-    # Detect objects using YOLOv8
-    results = detect_model(frame)
-    
-    # Iterate through the detected objects
-    for r in results:
-        boxes = r.boxes
-        for box in boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0])  # Convert coordinates to int
-            conf = box.conf[0]  # Confidence
-            cls = box.cls[0]  # Class
-            label = f"{detect_model.names[int(cls)]} {conf:.2f}"
-            
-            # Draw bounding box and label on the frame
-            cv.rectangle(frame, (x1-10, y1-10), (x2+20, y2+20), (0, 255, 0), 2)
-            cv.putText(frame, label, (x1, y1 - 20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            
-            # Extract the detected face
-            face = frame[y1:y2, x1:x2]
-            face_counter += 1
-            faces.append(face)
-
-            # Convert the face region from BGR to RGB
-            face_rgb = cv.cvtColor(face, cv.COLOR_BGR2RGB)
-
-            # Process the face with MediaPipe face mesh
-            result = face_mesh.process(face_rgb)
-
-            if result.multi_face_landmarks:
-                for face_landmarks in result.multi_face_landmarks:
-                    # Draw face landmarks on the face region
-                    mp_drawing.draw_landmarks(
-                        image=face,
-                        landmark_list=face_landmarks,
-                        connections=mp_face_mesh.FACEMESH_TESSELATION,
-                        landmark_drawing_spec=drawing_spec,
-                        connection_drawing_spec=drawing_spec)
-
-            # Classify the face
-            # predicts = classify_model.predict(face)
-            # prediction_idx = class_dict[predicts[0].probs.data.argmax().item()]
-            # print('frame' + str(frame_counter) + ' face' + str(face_counter) + ' : ' + prediction_idx)
-            # prediction = class_dict[prediction_idx]
-
-            # class_predict.append(prediction_idx)
-
-    # Process the frame for body detection using MediaPipe Pose
-    frame_rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-    pose_results = pose.process(frame_rgb)
-
-    if pose_results.pose_landmarks:
-        # Draw pose landmarks on the frame
-        mp_drawing.draw_landmarks(
-            image=frame,
-            landmark_list=pose_results.pose_landmarks,
-            connections=mp_pose.POSE_CONNECTIONS,
-            landmark_drawing_spec=mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2),
-            connection_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=2))
-
-    # Display the frame with detected objects and body landmarks
-    cv.imshow('frame', frame)
-    frame_counter += 1
-    
-    # Check for 'q' key press to exit
-    if cv.waitKey(1) == ord('q'):
-        break
-
-# Release video file and close windows
 cap.release()
-cv.destroyAllWindows()
+cv2.destroyAllWindows()
+print("Video processing completed.")
