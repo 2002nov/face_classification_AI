@@ -22,7 +22,7 @@ class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: '
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
-pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, model_complexity=1)
+pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, min_tracking_confidence=0.5, model_complexity=1)
 
 class App:
     def load_video(self):
@@ -294,4 +294,3 @@ class MyVideoCapture:
 
 if __name__ == '__main__':
     App()
-
