@@ -1,10 +1,3 @@
-File "/home/lab_brownien/anaconda3/envs/yolov8/lib/python3.8/tkinter/__init__.py", line 814, in callit
-    func(*args)
-  File "videoplayernew.py", line 76, in update
-    for pose_landmarks in results.pose_landmarks:
-TypeError: 'NormalizedLandmarkList' object is not iterable
-
-
 import sys
 import threading
 import time
@@ -80,13 +73,12 @@ class App:
                     results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                     skeletons = []
                     if results.pose_landmarks:
-                        for pose_landmarks in results.pose_landmarks:
-                            skeleton = []
-                            for landmark in pose_landmarks.landmark:
-                                skeleton.append((int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])))
-                            skeletons.append(skeleton)
-                            mp.solutions.drawing_utils.draw_landmarks(
-                                frame, pose_landmarks, mp_pose.POSE_CONNECTIONS)
+                        skeleton = []
+                        for landmark in results.pose_landmarks.landmark:
+                            skeleton.append((int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])))
+                        skeletons.append(skeleton)
+                        mp.solutions.drawing_utils.draw_landmarks(
+                            frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
                     # Match faces to skeletons
                     for i, (x1, y1, x2, y2) in enumerate([map(int, box.xyxy[0]) for r in detects for box in r.boxes]):
