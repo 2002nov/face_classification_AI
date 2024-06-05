@@ -70,7 +70,9 @@ class App:
                             print("Prediction face", i, ":", prediction)
                             self.window.Element("prediction").Update(f"Prediction: face {i}", font=("Calibri", 12))
 
-                    # Detect people using YOLO
+                    self.update_image(faces, predict_results)
+
+                    # Detect people using model
                     people_detects = modelPose(frame)
 
                     for r in people_detects:
@@ -83,7 +85,12 @@ class App:
                             results = pose.process(cv2.cvtColor(person_region, cv2.COLOR_BGR2RGB))
                             if results.pose_landmarks:
                                 mp.solutions.drawing_utils.draw_landmarks(
-                                    person_region, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+                                    person_region, 
+                                    results.pose_landmarks, 
+                                    mp_pose.POSE_CONNECTIONS,
+                                    mp.solutions.drawing_utils.DrawingSpec(color=(255, 0, 255), thickness=2, circle_radius=5),
+                                    mp.solutions.drawing_utils.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=5)
+                                )
 
                             # Place the processed region back into the frame
                             frame[y1:y2, x1:x2] = person_region
@@ -93,7 +100,6 @@ class App:
                         image=Image.fromarray(frame).resize((self.vid_width, self.vid_height), Image.NEAREST)
                     )
                     self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)  # play frame
-                    self.update_image(faces, predict_results)
                     self.frame += 1
                     self.update_counter(self.frame)
 
