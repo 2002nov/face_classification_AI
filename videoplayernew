@@ -71,21 +71,23 @@ class App:
 
                     # Detect skeletons
                     results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                    if results.pose_landmarks:
-                        mp.solutions.drawing_utils.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-
-                    # Match faces to skeletons
                     skeletons = []
                     if results.pose_landmarks:
                         for landmark in results.pose_landmarks.landmark:
                             skeletons.append((int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])))
 
-                    # Implement logic to associate faces with skeletons
-                    for i, (x1, y1, x2, y2) in enumerate([map(int, box.xyxy[0]) for r in detects for box in r.boxes]):
-                        face_center = ((x1 + x2) // 2, (y1 + y2) // 2)
-                        closest_skeleton = min(skeletons, key=lambda skel: (skel[0] - face_center[0])**2 + (skel[1] - face_center[1])**2)
-                        cv2.circle(frame, closest_skeleton, 5, (255, 0, 0), -1)
-                        cv2.line(frame, face_center, closest_skeleton, (255, 0, 0), 2)
+                    # Draw skeletons and match faces to skeletons
+                    if results.pose_landmarks:
+                        for i, pose_landmarks in enumerate(results.pose_landmarks.landmark):
+                            # Draw landmarks
+                            mp.solutions.drawing_utils.draw_landmarks(
+                                frame, pose_landmarks, mp_pose.POSE_CONNECTIONS)
+
+                        for i, (x1, y1, x2, y2) in enumerate([map(int, box.xyxy[0]) for r in detects for box in r.boxes]):
+                            face_center = ((x1 + x2) // 2, (y1 + y2) // 2)
+                            closest_skeleton = min(skeletons, key=lambda skel: (skel[0] - face_center[0])**2 + (skel[1] - face_center[1])**2)
+                            cv2.circle(frame, closest_skeleton, 5, (255, 0, 0), -1)
+                            cv2.line(frame, face_center, closest_skeleton, (255, 0, 0), 2)
 
                     self.photo = ImageTk.PhotoImage(
                         image=Image.fromarray(frame).resize((self.vid_width, self.vid_height), Image.NEAREST)
