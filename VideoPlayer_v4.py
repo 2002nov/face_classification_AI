@@ -14,9 +14,9 @@ import mediapipe as mp
 import numpy as np
 
 # Load models
-modelClassify = YOLO("/media/lab_brownien/data1/Work_Student2024_V2/AI_train/runs/classify/train15#/weights/best.pt")
-modelDetection = YOLO("/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/yolov8l-face.pt")
-modelPose = YOLO('/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/yolov8l-pose.pt')
+modelClassify = YOLO('/Users/bowbell/Desktop/face ai/best.pt')
+modelDetection = YOLO('/Users/bowbell/Desktop/face ai/yolov8l-face.pt')
+modelPose = YOLO('/Users/bowbell/Desktop/face ai/yolov8l-pose.pt')
 
 class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: 'Funny', 6: 'Happy', 7: 'Normal', 
               8: 'Proud', 9: 'Sad', 10: 'Scared', 11: 'Shy', 12: 'Sigh', 13: 'Superangry', 14: 'Surprised', 
@@ -228,14 +228,17 @@ class App:
 
         # Draw the joints
         joint_positions = [
-            (20, 13), (20, 18), (13, 18),
-            (27, 18), (5, 22), (35, 22),
-            (5, 27), (15, 25), (25, 25),
-            (35, 27), (10, 30), (30, 30),
-            (10, 35), (30, 35)
+            (20, 13, "Head"), (20, 18, "Neck"), (13, 18, "Left Shoulder"),
+            (27, 18, "Right Shoulder"), (5, 22, "Left Elbow"), (35, 22, "Right Elbow"),
+            (5, 27, "Left Wrist"), (15, 25, "Left Hip"), (25, 25, "Right Hip"),
+            (35, 27, "Right Wrist"), (10, 30, "Left Knee"), (30, 30, "Right Knee"),
+            (10, 35, "Left Ankle"), (30, 35, "Right Ankle")
         ]
+
         for joint in joint_positions:
-            cv2.circle(image, joint, 1, color, -1)
+            x, y, name = joint
+            cv2.circle(image, (x, y), 1, color, -1)
+            cv2.putText(image, name, (x + 5, y), cv2.FONT_HERSHEY_SIMPLEX, 0.3, color, 1)
 
         return image
 
@@ -379,4 +382,3 @@ class MyVideoCapture:
 
 if __name__ == '__main__':
     App()
-
