@@ -22,12 +22,15 @@ class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: '
               8: 'Proud', 9: 'Sad', 10: 'Scared', 11: 'Shy', 12: 'Sigh', 13: 'Superangry', 14: 'Surprised', 
               15: 'Suspicious', 16: 'Unhappy', 17: 'Worried', 18: 'sweet', 19: 'tricky'}
 
-joint_positions = [
-            (20, 13, "Head"), (20, 18, "Neck"), (13, 18, "Left Shoulder"),
-            (27, 18, "Right Shoulder"), (5, 22, "Left Elbow"), (35, 22, "Right Elbow"),
-            (5, 27, "Left Wrist"), (15, 25, "Left Hip"), (25, 25, "Right Hip"),
-            (35, 27, "Right Wrist"), (10, 30, "Left Knee"), (30, 30, "Right Knee"),
-            (10, 35, "Left Ankle"), (30, 35, "Right Ankle")]
+initial_joint_positions = [
+    (20, 13, "Head"), (20, 18, "Neck"), (13, 18, "Left Shoulder"),
+    (27, 18, "Right Shoulder"), (5, 22, "Left Elbow"), (35, 22, "Right Elbow"),
+    (5, 27, "Left Wrist"), (15, 25, "Left Hip"), (25, 25, "Right Hip"),
+    (35, 27, "Right Wrist"), (10, 30, "Left Knee"), (30, 30, "Right Knee"),
+    (10, 35, "Left Ankle"), (30, 35, "Right Ankle")
+]
+
+joint_positions = initial_joint_positions.copy()
 
 matching = []
 faces = []
@@ -116,7 +119,7 @@ class App:
                             # Place the processed region back into the frame
                             frame[y1:y2, x1:x2] = person_region
 
-                    print(matching)
+                    self.update_joints()
                     
                     self.update_graph(top3_indices_list, top3_probs_list)
                     self.photo = ImageTk.PhotoImage(
@@ -136,9 +139,12 @@ class App:
             if self.is_within(face_box, person_box):
                 self.individuals[individual_id]['pose'] = pose_landmarks
                 id = individual_id + 1
-                matching.append((id, self.pose_id))
+                matching.append((id, self.pose_id, pose_landmarks))
+                matching.sort(key=lambda x: x[0])  # Sort matching by ID
                 # Print to confirm matching
-                print(f"Pose {self.pose_id} matched with Face {id}")
+                #print(matching)
+                print(f"Face {id} matched with Pose {self.pose_id}")
+                print("-------------------------")
                 break  # Once matched, no need to check other individuals
 
     def is_within(self, box1, box2):
@@ -176,6 +182,35 @@ class App:
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
                 self.window[f"predicted_face_{i}"].update(value=f"{i+1}: not detected")
+
+    def update_joints(self):
+        global joint_positions
+        joint_positions = initial_joint_positions.copy()
+        for match in matching:
+            _, _, pose_landmarks = match
+            for joint_index, (x, y, name) in enumerate(joint_positions):
+                if joint_index < len(pose_landmarks.landmark):
+                    landmark = pose_landmarks.landmark[joint_index]
+                    joint_positions[joint_index] = (
+                        int(landmark.x * 40),
+                        int(landmark.y * 40),
+                        name
+                    )
+        self.update_stick_man_images()
+
+    def update_stick_man_images(self):
+        for i in range(20):
+            if i < len(faces):
+                stick_man_image = self.create_stick_man_image()
+                stick_man_bytes = self.convert_image_to_bytes(stick_man_image)
+                self.window[f"srick_man_{i}"].update(data=stick_man_bytes)
+            else:
+                # Set joint_positions back to initial_joint_positions
+                global joint_positions
+                joint_positions = initial_joint_positions.copy()
+                stick_man_image = self.create_stick_man_image()
+                stick_man_bytes = self.convert_image_to_bytes(stick_man_image)
+                self.window[f"srick_man_{i}"].update(data=stick_man_bytes)
 
     def init_graph(self):
         plt.rcParams.update({'font.size': 8}) 
@@ -286,10 +321,10 @@ class App:
             *[
                 [
                     sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), 
-                    sg.Image(data=stick_man_bytes, size=(40, 40)), 
+                    sg.Image(key=f"srick_man_{i}", data=stick_man_bytes, size=(40, 40)), 
                     sg.Text(f"{i+1}: not detected", key=f"predicted_face_{i}"),
                     sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), 
-                    sg.Image(data=stick_man_bytes, size=(40, 40)), 
+                    sg.Image(key=f"srick_man_{i+1}", data=stick_man_bytes, size=(40, 40)), 
                     sg.Text(f"{i+2}: not detected", key=f"predicted_face_{i+1}")
                 ] 
                 for i in range(0, 20, 2)
