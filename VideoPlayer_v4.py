@@ -14,13 +14,26 @@ import mediapipe as mp
 import numpy as np
 
 # Load models
-modelClassify = YOLO('/Users/bowbell/Desktop/face ai/best.pt')
-modelDetection = YOLO('/Users/bowbell/Desktop/face ai/yolov8l-face.pt')
-modelPose = YOLO('/Users/bowbell/Desktop/face ai/yolov8l-pose.pt')
+modelClassify = YOLO("/media/lab_brownien/data1/Work_Student2024_V2/AI_train/runs/classify/train15#/weights/best.pt")
+modelDetection = YOLO("/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/yolov8l-face.pt")
+modelPose = YOLO('/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/yolov8l-pose.pt')
 
 class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: 'Funny', 6: 'Happy', 7: 'Normal', 
               8: 'Proud', 9: 'Sad', 10: 'Scared', 11: 'Shy', 12: 'Sigh', 13: 'Superangry', 14: 'Surprised', 
               15: 'Suspicious', 16: 'Unhappy', 17: 'Worried', 18: 'sweet', 19: 'tricky'}
+
+joint_positions = [
+            (20, 13, "Head"), (20, 18, "Neck"), (13, 18, "Left Shoulder"),
+            (27, 18, "Right Shoulder"), (5, 22, "Left Elbow"), (35, 22, "Right Elbow"),
+            (5, 27, "Left Wrist"), (15, 25, "Left Hip"), (25, 25, "Right Hip"),
+            (35, 27, "Right Wrist"), (10, 30, "Left Knee"), (30, 30, "Right Knee"),
+            (10, 35, "Left Ankle"), (30, 35, "Right Ankle")]
+
+matching = []
+faces = []
+predict_results = []
+top3_indices_list = []
+top3_probs_list = []
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
@@ -39,12 +52,13 @@ class App:
             if self.play:
                 ret, frame = self.vid.get_frame()
                 if ret:
-                    faces = []
-                    predict_results = []
-                    top3_indices_list = []
-                    top3_probs_list = []
+                    faces.clear()
+                    predict_results.clear()
+                    top3_indices_list.clear()
+                    top3_probs_list.clear()
                     self.individuals = {}  # Initialize individuals dictionary for each frame
                     self.pose_id = 0  # Reset pose ID for each frame
+                    matching.clear()
 
                     detects = modelDetection(frame)
 
@@ -102,6 +116,8 @@ class App:
                             # Place the processed region back into the frame
                             frame[y1:y2, x1:x2] = person_region
 
+                    print(matching)
+                    
                     self.update_graph(top3_indices_list, top3_probs_list)
                     self.photo = ImageTk.PhotoImage(
                         image=Image.fromarray(frame).resize((self.vid_width, self.vid_height), Image.NEAREST)
@@ -114,12 +130,15 @@ class App:
 
     def assign_pose_to_individual(self, person_box, pose_landmarks):
         self.pose_id += 1  # Increment pose ID for each detected pose
-        for individual_id, individual in self.individuals.items():
+        for individual_id in sorted(self.individuals.keys()):
+            individual = self.individuals[individual_id]
             face_box = individual['face_box']
             if self.is_within(face_box, person_box):
                 self.individuals[individual_id]['pose'] = pose_landmarks
+                id = individual_id + 1
+                matching.append((id, self.pose_id))
                 # Print to confirm matching
-                print(f"Pose {self.pose_id} matched with Face {individual_id + 1}")
+                print(f"Pose {self.pose_id} matched with Face {id}")
                 break  # Once matched, no need to check other individuals
 
     def is_within(self, box1, box2):
@@ -200,45 +219,35 @@ class App:
         # Set the color to white (including alpha for transparency)
         color = (255, 255, 255, 255)
 
-        # Draw the head (scale down to fit within 40x40)
+        ## Draw the head (scale down to fit within 40x40)
         cv2.circle(image, (20, 8), 5, color, 1)
 
         # Draw the body
-        cv2.line(image, (20, 13), (20, 18), color, 1)
-        cv2.line(image, (13, 18), (15, 25), color, 1)
-        cv2.line(image, (27, 18), (25, 25), color, 1)
+        cv2.line(image, joint_positions[0][:2], joint_positions[1][:2], color, 1)
+        cv2.line(image, joint_positions[2][:2], joint_positions[7][:2], color, 1)
+        cv2.line(image, joint_positions[3][:2], joint_positions[8][:2], color, 1)
 
         # Draw the shoulders
-        cv2.line(image, (13, 18), (27, 18), color, 1)
+        cv2.line(image, joint_positions[2][:2], joint_positions[3][:2], color, 1)
 
         # Draw the arms
-        cv2.line(image, (13, 18), (5, 22), color, 1)
-        cv2.line(image, (27, 18), (35, 22), color, 1)
-        cv2.line(image, (5, 22), (5, 27), color, 1)
-        cv2.line(image, (35, 22), (35, 27), color, 1)
+        cv2.line(image, joint_positions[2][:2], joint_positions[4][:2], color, 1)
+        cv2.line(image, joint_positions[3][:2], joint_positions[5][:2], color, 1)
+        cv2.line(image, joint_positions[4][:2], joint_positions[6][:2], color, 1)
+        cv2.line(image, joint_positions[5][:2], joint_positions[9][:2], color, 1)
 
         # Draw the hips
-        cv2.line(image, (15, 25), (25, 25), color, 1)
+        cv2.line(image, joint_positions[7][:2], joint_positions[8][:2], color, 1)
 
         # Draw the legs
-        cv2.line(image, (15, 25), (10, 30), color, 1)
-        cv2.line(image, (25, 25), (30, 30), color, 1)
-        cv2.line(image, (10, 30), (10, 35), color, 1)
-        cv2.line(image, (30, 30), (30, 35), color, 1)
-
-        # Draw the joints
-        joint_positions = [
-            (20, 13, "Head"), (20, 18, "Neck"), (13, 18, "Left Shoulder"),
-            (27, 18, "Right Shoulder"), (5, 22, "Left Elbow"), (35, 22, "Right Elbow"),
-            (5, 27, "Left Wrist"), (15, 25, "Left Hip"), (25, 25, "Right Hip"),
-            (35, 27, "Right Wrist"), (10, 30, "Left Knee"), (30, 30, "Right Knee"),
-            (10, 35, "Left Ankle"), (30, 35, "Right Ankle")
-        ]
+        cv2.line(image, joint_positions[7][:2], joint_positions[10][:2], color, 1)
+        cv2.line(image, joint_positions[8][:2], joint_positions[11][:2], color, 1)
+        cv2.line(image, joint_positions[10][:2], joint_positions[12][:2], color, 1)
+        cv2.line(image, joint_positions[11][:2], joint_positions[13][:2], color, 1)
 
         for joint in joint_positions:
-            x, y, name = joint
+            x, y, _ = joint  # Ignoring the third element (name)
             cv2.circle(image, (x, y), 1, color, -1)
-            cv2.putText(image, name, (x + 5, y), cv2.FONT_HERSHEY_SIMPLEX, 0.3, color, 1)
 
         return image
 
