@@ -330,16 +330,12 @@ class App:
             [sg.Text("Detected Faces", font=("Helvetica", 14))],
             *[
                 [
-                    sg.Column([
-                        sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), 
-                        sg.Image(key=f"srick_man_{i}", data=stick_man_bytes, size=(40, 40)), 
-                        sg.Text(f"{i+1}: not detected", key=f"predicted_face_{i}")
-                    ], element_justification='center', pad=(0, 10)),
-                    sg.Column([
-                        sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), 
-                        sg.Image(key=f"srick_man_{i+1}", data=stick_man_bytes, size=(40, 40)), 
-                        sg.Text(f"{i+2}: not detected", key=f"predicted_face_{i+1}")
-                    ], element_justification='center', pad=(0, 10))
+                    sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), 
+                    sg.Image(key=f"srick_man_{i}", data=stick_man_bytes, size=(40, 40)), 
+                    sg.Text(f"{i+1}: not detected", key=f"predicted_face_{i}"),
+                    sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), 
+                    sg.Image(key=f"srick_man_{i+1}", data=stick_man_bytes, size=(40, 40)), 
+                    sg.Text(f"{i+2}: not detected", key=f"predicted_face_{i+1}")
                 ] 
                 for i in range(0, 20, 2)
             ]
