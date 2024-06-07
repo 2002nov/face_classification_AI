@@ -1,5 +1,3 @@
-# cv2.drawline python
-
 import sys
 import threading
 import time
@@ -13,6 +11,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import torch
 from ultralytics import YOLO
 import mediapipe as mp
+import numpy as np
 
 # Load models
 modelClassify = YOLO('/Users/bowbell/Desktop/face ai/best.pt')
@@ -22,6 +21,26 @@ modelPose = YOLO("/Users/bowbell/Desktop/face ai/yolov8l-pose.pt")
 class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: 'Funny', 6: 'Happy', 7: 'Normal', 
               8: 'Proud', 9: 'Sad', 10: 'Scared', 11: 'Shy', 12: 'Sigh', 13: 'Superangry', 14: 'Surprised', 
               15: 'Suspicious', 16: 'Unhappy', 17: 'Worried', 18: 'sweet', 19: 'tricky'}
+
+initial_joint_positions = [
+    (20, 8, "Nose"), (0, 0, "Left Eye Inner"), (0, 0, "Left Eye"), (0, 0, "Left Eye Outer"),
+    (0, 0, "Right Eye Inner"), (0, 0, "Right Eye"), (0, 0, "Right Eye Outer"),
+    (0, 0, "Left Ear"), (0, 0, "Right Ear"), (0, 0, "Mouth Left"), (0, 0, "Mouth Right"),
+    (27, 18, "Left Shoulder"), (13, 18, "Right Shoulder"), (35, 22, "Left Elbow"), (5, 22, "Right Elbow"),
+    (35, 27, "Left Wrist"), (5, 27, "Right Wrist"), (0, 0, "Left Pinky"), (0, 0, "Right Pinky"),
+    (0, 0, "Left Index"), (0, 0, "Right Index"), (0, 0, "Left Thumb"), (0, 0, "Right Thumb"),
+    (25, 25, "Left Hip"), (15, 25, "Right Hip"), (30, 30, "Left Knee"), (10, 30, "Right Knee"),
+    (0, 0, "Left Ankle"), (0, 0, "Right Ankle"), (0, 0, "Left Heel"), (0, 0, "Right Heel"),
+    (30, 35, "Left Foot Index"), (10, 35, "Right Foot Index")
+]
+
+joint_positions = initial_joint_positions.copy()
+
+matching = []
+faces = []
+predict_results = []
+top3_indices_list = []
+top3_probs_list = []
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
@@ -40,12 +59,13 @@ class App:
             if self.play:
                 ret, frame = self.vid.get_frame()
                 if ret:
-                    faces = []
-                    predict_results = []
-                    top3_indices_list = []
-                    top3_probs_list = []
+                    faces.clear()
+                    predict_results.clear()
+                    top3_indices_list.clear()
+                    top3_probs_list.clear()
                     self.individuals = {}  # Initialize individuals dictionary for each frame
                     self.pose_id = 0  # Reset pose ID for each frame
+                    matching.clear()
 
                     detects = modelDetection(frame)
 
@@ -71,7 +91,7 @@ class App:
                             top3_indices_list.append(top3_indices)
                             top3_probs_list.append(top3_probs)
 
-                            self.individuals[i] = {'face_box': (x1, y1, x2, y2), 'pose': None}
+                            self.individuals[i] = {'face_box': (x1, y1, x2, y2), 'pose': None} # Create dictionary
 
                             print(f"Face {i+1}: {prediction}")
 
@@ -86,7 +106,7 @@ class App:
                             x1, y1, x2, y2 = map(int, box.xyxy[0])
                             person_region = frame[y1:y2, x1:x2]
                             label = f"pose {i+1}"
-                            cv2.putText(frame, label, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
+                            cv2.putText(frame, label, (x1, y1-20), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
 
                             # Pose Estimation using MediaPipe for each person detected
                             results = pose.process(cv2.cvtColor(person_region, cv2.COLOR_BGR2RGB))
@@ -98,11 +118,13 @@ class App:
                                     mp.solutions.drawing_utils.DrawingSpec(color=(255, 0, 255), thickness=2, circle_radius=5),
                                     mp.solutions.drawing_utils.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=5)
                                 )
-                                self.assign_pose_to_individual((x1, y1, x2, y2), results.pose_landmarks)
+                                self.assign_pose_to_individual((x1, y1, x2, y2), results.pose_landmarks) # Matching
 
                             # Place the processed region back into the frame
                             frame[y1:y2, x1:x2] = person_region
 
+                    self.update_joints()
+                    
                     self.update_graph(top3_indices_list, top3_probs_list)
                     self.photo = ImageTk.PhotoImage(
                         image=Image.fromarray(frame).resize((self.vid_width, self.vid_height), Image.NEAREST)
@@ -115,12 +137,16 @@ class App:
 
     def assign_pose_to_individual(self, person_box, pose_landmarks):
         self.pose_id += 1  # Increment pose ID for each detected pose
-        for individual_id, individual in self.individuals.items():
+        for individual_id in sorted(self.individuals.keys()):
+            individual = self.individuals[individual_id]
             face_box = individual['face_box']
             if self.is_within(face_box, person_box):
                 self.individuals[individual_id]['pose'] = pose_landmarks
-                # Print to confirm matching
-                print(f"Pose {self.pose_id} matched with Face {individual_id + 1}")
+                id = individual_id + 1
+                matching.append((id, self.pose_id, pose_landmarks))
+                matching.sort(key=lambda x: x[0])  # Sort matching by ID
+                print(f"Face {id} matched with Pose {self.pose_id}")
+                print("-------------------------")
                 break  # Once matched, no need to check other individuals
 
     def is_within(self, box1, box2):
@@ -149,7 +175,7 @@ class App:
                 img.save(bio, format="PNG")
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
-                self.window[f"predicted_face_{i}"].update(value=f"face {i+1}: {predict_results[i]}")
+                self.window[f"predicted_face_{i}"].update(value=f"{i+1}: {predict_results[i]}")
             else:
                 # Update with a black image if there are no faces
                 black_img = Image.new("RGB", (40, 40), (0, 0, 0))
@@ -157,7 +183,40 @@ class App:
                 black_img.save(bio, format="PNG")
                 bio.seek(0)
                 self.window[f"selected_face_{i}"].update(data=bio.read())
-                self.window[f"predicted_face_{i}"].update(value=f"face {i+1}: not detected")
+                self.window[f"predicted_face_{i}"].update(value=f"{i+1}: not detected")
+
+    def update_joints(self):
+        global joint_positions
+        for i, match in enumerate(matching):
+            _, _, pose_landmarks = match
+            if pose_landmarks:
+                joint_positions = initial_joint_positions.copy()
+                for joint_index, (x, y, name) in enumerate(joint_positions):
+                    if joint_index < len(pose_landmarks.landmark):
+                        landmark = pose_landmarks.landmark[joint_index]
+                        joint_positions[joint_index] = (
+                            int(landmark.x * 40),
+                            int(landmark.y * 40),
+                            name
+                        )
+                self.update_stick_man_image(i)
+
+    def update_stick_man_images(self):
+        for i in range(20):
+            if i < len(faces):
+                self.update_stick_man_image(i)
+            else:
+                # Set joint_positions back to initial_joint_positions for stick men without detected faces
+                global joint_positions
+                joint_positions = initial_joint_positions.copy()
+                stick_man_image = self.create_stick_man_image()
+                stick_man_bytes = self.convert_image_to_bytes(stick_man_image)
+                self.window[f"srick_man_{i}"].update(data=stick_man_bytes)
+
+    def update_stick_man_image(self, index):
+        stick_man_image = self.create_stick_man_image()
+        stick_man_bytes = self.convert_image_to_bytes(stick_man_image)
+        self.window[f"srick_man_{index}"].update(data=stick_man_bytes)
 
     def init_graph(self):
         plt.rcParams.update({'font.size': 8}) 
@@ -194,6 +253,54 @@ class App:
             self.ax.autoscale_view()
             self.graph_canvas.draw()
 
+    def create_stick_man_image(self):
+        # Create a blank image with an alpha channel (transparency)
+        image = np.zeros((40, 40, 4), dtype="uint8")
+
+        # Set the color to white (including alpha for transparency)
+        color = (255, 255, 255, 255)
+
+        # Draw the head (scale down to fit within 40x40)
+        cv2.circle(image, joint_positions[0][:2], 5, color, 1)
+
+        # Calculate the middle point between left shoulder and right shoulder
+        middle_shoulder = (joint_positions[11][0] + joint_positions[12][0]) // 2
+
+        # Draw the body
+        cv2.line(image, (joint_positions[0][0], joint_positions[0][1] + 5), (middle_shoulder, joint_positions[12][1]), color, 1)
+        cv2.line(image, joint_positions[11][:2], joint_positions[23][:2], color, 1)
+        cv2.line(image, joint_positions[12][:2], joint_positions[24][:2], color, 1)
+
+        # Draw the shoulders
+        cv2.line(image, joint_positions[11][:2], joint_positions[12][:2], color, 1)
+
+        # Draw the arms
+        cv2.line(image, joint_positions[11][:2], joint_positions[13][:2], color, 1)
+        cv2.line(image, joint_positions[12][:2], joint_positions[14][:2], color, 1)
+        cv2.line(image, joint_positions[13][:2], joint_positions[15][:2], color, 1)
+        cv2.line(image, joint_positions[14][:2], joint_positions[16][:2], color, 1)
+
+        # Draw the hips
+        cv2.line(image, joint_positions[23][:2], joint_positions[24][:2], color, 1)
+
+        # Draw the legs
+        cv2.line(image, joint_positions[23][:2], joint_positions[25][:2], color, 1)
+        cv2.line(image, joint_positions[24][:2], joint_positions[26][:2], color, 1)
+        cv2.line(image, joint_positions[25][:2], joint_positions[31][:2], color, 1)
+        cv2.line(image, joint_positions[26][:2], joint_positions[32][:2], color, 1)
+
+        for joint in joint_positions:
+            x, y, _ = joint  # Ignoring the third element (name)
+            if x != 0 or y != 0:  # Check if the joint is not at (0, 0)
+                cv2.circle(image, (x, y), 1, color, -1)
+
+        return image
+
+    def convert_image_to_bytes(self, image):
+        is_success, im_buf_arr = cv2.imencode(".png", image)
+        byte_im = im_buf_arr.tobytes()
+        return byte_im
+
     def __init__(self):
         self.play = True
         self.delay = 0.023
@@ -201,6 +308,9 @@ class App:
         self.frames = None
         self.vid = None
         self.photo = None
+
+        stick_man_image = self.create_stick_man_image()
+        stick_man_bytes = self.convert_image_to_bytes(stick_man_image)
 
         menu_def = [['&File', ['&Open', '&Save', '---', 'Properties', 'E&xit']],
                     ['&Edit', ['Paste', ['Special', 'Normal'], 'Undo']],
@@ -219,8 +329,18 @@ class App:
         empty_container_column = [
             [sg.Text("Detected Faces", font=("Helvetica", 14))],
             *[
-                [sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), sg.Text(f"face {i+1}: not detected", key=f"predicted_face_{i}"),
-                sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), sg.Text(f"face {i+2}: not detected", key=f"predicted_face_{i+1}")] 
+                [
+                    sg.Column([
+                        sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), 
+                        sg.Image(key=f"srick_man_{i}", data=stick_man_bytes, size=(40, 40)), 
+                        sg.Text(f"{i+1}: not detected", key=f"predicted_face_{i}")
+                    ], element_justification='center', pad=(0, 10)),
+                    sg.Column([
+                        sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), 
+                        sg.Image(key=f"srick_man_{i+1}", data=stick_man_bytes, size=(40, 40)), 
+                        sg.Text(f"{i+2}: not detected", key=f"predicted_face_{i+1}")
+                    ], element_justification='center', pad=(0, 10))
+                ] 
                 for i in range(0, 20, 2)
             ]
         ]
