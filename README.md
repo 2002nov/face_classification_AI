@@ -11,3 +11,4 @@ https://www.ssyoutube.com/watch?v=kbGm4grn-60 new
 Drive: https://drive.google.com/drive/folders/1sGEwNcyRIdq3U3-er4V6GYgY04QcAL_s?usp=sharing
 
 https://github.com/ultralytics/ultralytics/issues/1915
+https://www.youtube.com/watch?v=UARbxLZV4Ws
