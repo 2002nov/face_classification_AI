@@ -23,11 +23,15 @@ class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: '
               15: 'Suspicious', 16: 'Unhappy', 17: 'Worried', 18: 'sweet', 19: 'tricky'}
 
 initial_joint_positions = [
-    (20, 13, "Head"), (20, 18, "Neck"), (13, 18, "Left Shoulder"),
-    (27, 18, "Right Shoulder"), (5, 22, "Left Elbow"), (35, 22, "Right Elbow"),
-    (5, 27, "Left Wrist"), (15, 25, "Left Hip"), (25, 25, "Right Hip"),
-    (35, 27, "Right Wrist"), (10, 30, "Left Knee"), (30, 30, "Right Knee"),
-    (10, 35, "Left Ankle"), (30, 35, "Right Ankle")
+    (20, 8, "Nose"), (0, 0, "Left Eye Inner"), (0, 0, "Left Eye"), (0, 0, "Left Eye Outer"),
+    (0, 0, "Right Eye Inner"), (0, 0, "Right Eye"), (0, 0, "Right Eye Outer"),
+    (0, 0, "Left Ear"), (0, 0, "Right Ear"), (0, 0, "Mouth Left"), (0, 0, "Mouth Right"),
+    (27, 18, "Left Shoulder"), (13, 18, "Right Shoulder"), (35, 22, "Left Elbow"), (5, 22, "Right Elbow"),
+    (35, 27, "Left Wrist"), (5, 27, "Right Wrist"), (0, 0, "Left Pinky"), (0, 0, "Right Pinky"),
+    (0, 0, "Left Index"), (0, 0, "Right Index"), (0, 0, "Left Thumb"), (0, 0, "Right Thumb"),
+    (25, 25, "Left Hip"), (15, 25, "Right Hip"), (30, 30, "Left Knee"), (10, 30, "Right Knee"),
+    (0, 0, "Left Ankle"), (0, 0, "Right Ankle"), (0, 0, "Left Heel"), (0, 0, "Right Heel"),
+    (30, 35, "Left Foot Index"), (10, 35, "Right Foot Index")
 ]
 
 joint_positions = initial_joint_positions.copy()
@@ -185,32 +189,36 @@ class App:
 
     def update_joints(self):
         global joint_positions
-        joint_positions = initial_joint_positions.copy()
-        for match in matching:
+        for i, match in enumerate(matching):
             _, _, pose_landmarks = match
-            for joint_index, (x, y, name) in enumerate(joint_positions):
-                if joint_index < len(pose_landmarks.landmark):
-                    landmark = pose_landmarks.landmark[joint_index]
-                    joint_positions[joint_index] = (
-                        int(landmark.x * 40),
-                        int(landmark.y * 40),
-                        name
-                    )
-        self.update_stick_man_images()
+            if pose_landmarks:
+                joint_positions = initial_joint_positions.copy()
+                for joint_index, (x, y, name) in enumerate(joint_positions):
+                    if joint_index < len(pose_landmarks.landmark):
+                        landmark = pose_landmarks.landmark[joint_index]
+                        joint_positions[joint_index] = (
+                            int(landmark.x * 40),
+                            int(landmark.y * 40),
+                            name
+                        )
+                self.update_stick_man_image(i)
 
     def update_stick_man_images(self):
         for i in range(20):
             if i < len(faces):
-                stick_man_image = self.create_stick_man_image()
-                stick_man_bytes = self.convert_image_to_bytes(stick_man_image)
-                self.window[f"srick_man_{i}"].update(data=stick_man_bytes)
+                self.update_stick_man_image(i)
             else:
-                # Set joint_positions back to initial_joint_positions
+                # Set joint_positions back to initial_joint_positions for stick men without detected faces
                 global joint_positions
                 joint_positions = initial_joint_positions.copy()
                 stick_man_image = self.create_stick_man_image()
                 stick_man_bytes = self.convert_image_to_bytes(stick_man_image)
                 self.window[f"srick_man_{i}"].update(data=stick_man_bytes)
+
+    def update_stick_man_image(self, index):
+        stick_man_image = self.create_stick_man_image()
+        stick_man_bytes = self.convert_image_to_bytes(stick_man_image)
+        self.window[f"srick_man_{index}"].update(data=stick_man_bytes)
 
     def init_graph(self):
         plt.rcParams.update({'font.size': 8}) 
@@ -254,35 +262,39 @@ class App:
         # Set the color to white (including alpha for transparency)
         color = (255, 255, 255, 255)
 
-        ## Draw the head (scale down to fit within 40x40)
-        cv2.circle(image, (20, 8), 5, color, 1)
+        # Draw the head (scale down to fit within 40x40)
+        cv2.circle(image, joint_positions[0][:2], 5, color, 1)
+
+        # Calculate the middle point between left shoulder and right shoulder
+        middle_shoulder = (joint_positions[11][0] + joint_positions[12][0]) // 2
 
         # Draw the body
-        cv2.line(image, joint_positions[0][:2], joint_positions[1][:2], color, 1)
-        cv2.line(image, joint_positions[2][:2], joint_positions[7][:2], color, 1)
-        cv2.line(image, joint_positions[3][:2], joint_positions[8][:2], color, 1)
+        cv2.line(image, (joint_positions[0][0], joint_positions[0][1] + 5), (middle_shoulder, joint_positions[12][1]), color, 1)
+        cv2.line(image, joint_positions[11][:2], joint_positions[23][:2], color, 1)
+        cv2.line(image, joint_positions[12][:2], joint_positions[24][:2], color, 1)
 
         # Draw the shoulders
-        cv2.line(image, joint_positions[2][:2], joint_positions[3][:2], color, 1)
+        cv2.line(image, joint_positions[11][:2], joint_positions[12][:2], color, 1)
 
         # Draw the arms
-        cv2.line(image, joint_positions[2][:2], joint_positions[4][:2], color, 1)
-        cv2.line(image, joint_positions[3][:2], joint_positions[5][:2], color, 1)
-        cv2.line(image, joint_positions[4][:2], joint_positions[6][:2], color, 1)
-        cv2.line(image, joint_positions[5][:2], joint_positions[9][:2], color, 1)
+        cv2.line(image, joint_positions[11][:2], joint_positions[13][:2], color, 1)
+        cv2.line(image, joint_positions[12][:2], joint_positions[14][:2], color, 1)
+        cv2.line(image, joint_positions[13][:2], joint_positions[15][:2], color, 1)
+        cv2.line(image, joint_positions[14][:2], joint_positions[16][:2], color, 1)
 
         # Draw the hips
-        cv2.line(image, joint_positions[7][:2], joint_positions[8][:2], color, 1)
+        cv2.line(image, joint_positions[23][:2], joint_positions[24][:2], color, 1)
 
         # Draw the legs
-        cv2.line(image, joint_positions[7][:2], joint_positions[10][:2], color, 1)
-        cv2.line(image, joint_positions[8][:2], joint_positions[11][:2], color, 1)
-        cv2.line(image, joint_positions[10][:2], joint_positions[12][:2], color, 1)
-        cv2.line(image, joint_positions[11][:2], joint_positions[13][:2], color, 1)
+        cv2.line(image, joint_positions[23][:2], joint_positions[25][:2], color, 1)
+        cv2.line(image, joint_positions[24][:2], joint_positions[26][:2], color, 1)
+        cv2.line(image, joint_positions[25][:2], joint_positions[31][:2], color, 1)
+        cv2.line(image, joint_positions[26][:2], joint_positions[32][:2], color, 1)
 
         for joint in joint_positions:
             x, y, _ = joint  # Ignoring the third element (name)
-            cv2.circle(image, (x, y), 1, color, -1)
+            if x != 0 or y != 0:  # Check if the joint is not at (0, 0)
+                cv2.circle(image, (x, y), 1, color, -1)
 
         return image
 
