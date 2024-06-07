@@ -14,9 +14,9 @@ import mediapipe as mp
 import numpy as np
 
 # Load models
-modelClassify = YOLO('/Users/bowbell/Desktop/face ai/best.pt')
-modelDetection = YOLO("/Users/bowbell/Desktop/face ai/yolov8l-face.pt")
-modelPose = YOLO("/Users/bowbell/Desktop/face ai/yolov8l-pose.pt")
+modelClassify = YOLO("/media/lab_brownien/data1/Work_Student2024_V2/AI_train/runs/classify/train15#/weights/best.pt")
+modelDetection = YOLO("/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/yolov8l-face.pt")
+modelPose = YOLO('/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/yolov8l-pose.pt')
 
 class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: 'Funny', 6: 'Happy', 7: 'Normal', 
               8: 'Proud', 9: 'Sad', 10: 'Scared', 11: 'Shy', 12: 'Sigh', 13: 'Superangry', 14: 'Surprised', 
@@ -95,7 +95,7 @@ class App:
 
                             print(f"Face {i+1}: {prediction}")
 
-                    self.update_image(faces, predict_results)
+                    self.update_image()
 
                     # Detect people using model
                     people_detects = modelPose(frame)
@@ -123,7 +123,7 @@ class App:
                             # Place the processed region back into the frame
                             frame[y1:y2, x1:x2] = person_region
 
-                    self.update_joints()
+                    self.update_stick()
                     
                     self.update_graph(top3_indices_list, top3_probs_list)
                     self.photo = ImageTk.PhotoImage(
@@ -145,6 +145,8 @@ class App:
                 id = individual_id + 1
                 matching.append((id, self.pose_id, pose_landmarks))
                 matching.sort(key=lambda x: x[0])  # Sort matching by ID
+                # Print to confirm matching
+                print(len(matching))
                 print(f"Face {id} matched with Pose {self.pose_id}")
                 print("-------------------------")
                 break  # Once matched, no need to check other individuals
@@ -166,7 +168,7 @@ class App:
         self.window.Element("slider").Update(value=frame)
         self.window.Element("counter").Update(f"{frame}/{self.frames}")
 
-    def update_image(self, faces, predict_results):
+    def update_image(self):
         for i in range(20):  # Ensure 20 containers are updated
             if i < len(faces):
                 face = faces[i]
@@ -185,26 +187,11 @@ class App:
                 self.window[f"selected_face_{i}"].update(data=bio.read())
                 self.window[f"predicted_face_{i}"].update(value=f"{i+1}: not detected")
 
-    def update_joints(self):
-        global joint_positions
-        for i, match in enumerate(matching):
-            _, _, pose_landmarks = match
-            if pose_landmarks:
-                joint_positions = initial_joint_positions.copy()
-                for joint_index, (x, y, name) in enumerate(joint_positions):
-                    if joint_index < len(pose_landmarks.landmark):
-                        landmark = pose_landmarks.landmark[joint_index]
-                        joint_positions[joint_index] = (
-                            int(landmark.x * 40),
-                            int(landmark.y * 40),
-                            name
-                        )
-                self.update_stick_man_image(i)
-
-    def update_stick_man_images(self):
-        for i in range(20):
-            if i < len(faces):
-                self.update_stick_man_image(i)
+    def update_stick(self):
+        for i in range(20):  # Ensure 20 containers are updated
+            if i < len(matching):
+                match = matching[i]
+                self.update_joints(match)
             else:
                 # Set joint_positions back to initial_joint_positions for stick men without detected faces
                 global joint_positions
@@ -213,10 +200,25 @@ class App:
                 stick_man_bytes = self.convert_image_to_bytes(stick_man_image)
                 self.window[f"srick_man_{i}"].update(data=stick_man_bytes)
 
+    def update_joints(self, match):
+        global joint_positions
+        id, _, pose_landmarks = match
+        if pose_landmarks:
+            joint_positions = initial_joint_positions.copy()
+            for joint_index, (x, y, name) in enumerate(joint_positions):
+                if joint_index < len(pose_landmarks.landmark):
+                    landmark = pose_landmarks.landmark[joint_index]
+                    joint_positions[joint_index] = (
+                        int(landmark.x * 40),
+                        int(landmark.y * 40),
+                        name
+                    )
+            self.update_stick_man_image(id)
+
     def update_stick_man_image(self, index):
         stick_man_image = self.create_stick_man_image()
         stick_man_bytes = self.convert_image_to_bytes(stick_man_image)
-        self.window[f"srick_man_{index}"].update(data=stick_man_bytes)
+        self.window[f"srick_man_{index-1}"].update(data=stick_man_bytes)
 
     def init_graph(self):
         plt.rcParams.update({'font.size': 8}) 
@@ -289,8 +291,10 @@ class App:
         cv2.line(image, joint_positions[25][:2], joint_positions[31][:2], color, 1)
         cv2.line(image, joint_positions[26][:2], joint_positions[32][:2], color, 1)
 
-        for joint in joint_positions:
-            x, y, _ = joint  # Ignoring the third element (name)
+        # Draw the selected joints
+        selected_indices = [11, 12, 23, 24, 13, 14, 15, 16, 25, 26, 31, 32]
+        for index in selected_indices:
+            x, y, _ = joint_positions[index]  # Ignoring the third element (name)
             if x != 0 or y != 0:  # Check if the joint is not at (0, 0)
                 cv2.circle(image, (x, y), 1, color, -1)
 
@@ -332,10 +336,10 @@ class App:
                 [
                     sg.Image(key=f"selected_face_{i}", size=(40, 40), background_color="black"), 
                     sg.Image(key=f"srick_man_{i}", data=stick_man_bytes, size=(40, 40)), 
-                    sg.Text(f"{i+1}: not detected", key=f"predicted_face_{i}"),
+                    sg.Text(f"{i+1}: not detected", key=f"predicted_face_{i}", size=(15, 1)),
                     sg.Image(key=f"selected_face_{i+1}", size=(40, 40), background_color="black"), 
                     sg.Image(key=f"srick_man_{i+1}", data=stick_man_bytes, size=(40, 40)), 
-                    sg.Text(f"{i+2}: not detected", key=f"predicted_face_{i+1}")
+                    sg.Text(f"{i+2}: not detected", key=f"predicted_face_{i+1}", size=(15, 1))
                 ] 
                 for i in range(0, 20, 2)
             ]
@@ -436,4 +440,3 @@ class MyVideoCapture:
 
 if __name__ == '__main__':
     App()
-
