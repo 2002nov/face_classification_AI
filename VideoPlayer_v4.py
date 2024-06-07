@@ -14,9 +14,9 @@ import mediapipe as mp
 import numpy as np
 
 # Load models
-modelClassify = YOLO("/media/lab_brownien/data1/Work_Student2024_V2/AI_train/runs/classify/train15#/weights/best.pt")
-modelDetection = YOLO("/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/yolov8l-face.pt")
-modelPose = YOLO('/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/yolov8l-pose.pt')
+modelClassify = YOLO('/Users/bowbell/Desktop/face ai/best.pt')
+modelDetection = YOLO("/Users/bowbell/Desktop/face ai/yolov8l-face.pt")
+modelPose = YOLO("/Users/bowbell/Desktop/face ai/yolov8l-pose.pt")
 
 class_dict = {0: 'Angry', 1: 'Bored', 2: 'Confused', 3: 'Cool', 4: 'Errrr', 5: 'Funny', 6: 'Happy', 7: 'Normal', 
               8: 'Proud', 9: 'Sad', 10: 'Scared', 11: 'Shy', 12: 'Sigh', 13: 'Superangry', 14: 'Surprised', 
@@ -145,8 +145,6 @@ class App:
                 id = individual_id + 1
                 matching.append((id, self.pose_id, pose_landmarks))
                 matching.sort(key=lambda x: x[0])  # Sort matching by ID
-                # Print to confirm matching
-                #print(matching)
                 print(f"Face {id} matched with Pose {self.pose_id}")
                 print("-------------------------")
                 break  # Once matched, no need to check other individuals
@@ -438,3 +436,4 @@ class MyVideoCapture:
 
 if __name__ == '__main__':
     App()
+
