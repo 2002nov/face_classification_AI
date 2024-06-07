@@ -75,8 +75,8 @@ class App:
                             x1, y1, x2, y2 = map(int, box.xyxy[0])
                             label = f"face {i+1}"
                             
-                            cv2.rectangle(frame, (x1-20, y1-20), (x2+20, y2+20), (0, 255, 0), 2)
-                            cv2.putText(frame, label, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
+                            #cv2.rectangle(frame, (x1-20, y1-20), (x2+20, y2+20), (0, 255, 0), 2)
+                            #cv2.putText(frame, label, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
                             face = frame[y1:y2, x1:x2]
                             faces.append(face)
 
@@ -106,18 +106,18 @@ class App:
                             x1, y1, x2, y2 = map(int, box.xyxy[0])
                             person_region = frame[y1:y2, x1:x2]
                             label = f"pose {i+1}"
-                            cv2.putText(frame, label, (x1, y1-20), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
+                            #cv2.putText(frame, label, (x1, y1-20), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
 
                             # Pose Estimation using MediaPipe for each person detected
                             results = pose.process(cv2.cvtColor(person_region, cv2.COLOR_BGR2RGB))
                             if results.pose_landmarks:
-                                mp.solutions.drawing_utils.draw_landmarks(
-                                    person_region, 
-                                    results.pose_landmarks, 
-                                    mp_pose.POSE_CONNECTIONS,
-                                    mp.solutions.drawing_utils.DrawingSpec(color=(255, 0, 255), thickness=2, circle_radius=5),
-                                    mp.solutions.drawing_utils.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=5)
-                                )
+                                #mp.solutions.drawing_utils.draw_landmarks(
+                                    #person_region, 
+                                    #results.pose_landmarks, 
+                                    #mp_pose.POSE_CONNECTIONS,
+                                    #mp.solutions.drawing_utils.DrawingSpec(color=(255, 0, 255), thickness=2, circle_radius=5),
+                                   # mp.solutions.drawing_utils.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=5)
+                                #)
                                 self.assign_pose_to_individual((x1, y1, x2, y2), results.pose_landmarks) # Matching
 
                             # Place the processed region back into the frame
