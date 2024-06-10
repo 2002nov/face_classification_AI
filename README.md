@@ -16,3 +16,5 @@ https://www.youtube.com/watch?v=UARbxLZV4Ws
 RE-ID
 Dataset: https://www.kaggle.com/datasets/priyanagda/cuhk03?resource=download
 example: https://github.com/Nirvan101/Person-Re-identification/tree/master
+
+new : https://github.com/layumi/Person_reID_baseline_pytorch/blob/master/re_ranking.py
