@@ -13,5 +13,6 @@ Drive: https://drive.google.com/drive/folders/1sGEwNcyRIdq3U3-er4V6GYgY04QcAL_s?
 https://github.com/ultralytics/ultralytics/issues/1915
 https://www.youtube.com/watch?v=UARbxLZV4Ws
 
+RE-ID
 Dataset: https://www.kaggle.com/datasets/priyanagda/cuhk03?resource=download
 example: https://github.com/Nirvan101/Person-Re-identification/tree/master
