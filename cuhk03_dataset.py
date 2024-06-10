@@ -1,0 +1,100 @@
+import numpy as np
+import h5py
+import os
+import cv2
+import random
+import sys
+
+def make_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+def prepare_data(path):
+    try:
+        f = h5py.File(os.path.join(path, 'cuhk03_release', 'cuhk-03.mat'), 'r')
+    except Exception as e:
+        print("Error opening file: {}".format(e))
+        return
+
+    labeled = [f['labeled'][0][i] for i in range(len(f['labeled'][0]))]
+    labeled = [f[labeled[0]][i] for i in range(len(f[labeled[0]]))]
+    detected = [f['detected'][0][i] for i in range(len(f['detected'][0]))]
+    detected = [f[detected[0]][i] for i in range(len(f[detected[0]]))]
+    datasets = [['labeled', labeled], ['detected', detected]]
+    prev_id = 0
+
+    for dataset in datasets:
+        train_path = os.path.join(path, 'images_' + dataset[0], 'train')
+        val_path = os.path.join(path, 'images_' + dataset[0], 'val')
+
+        make_dir(train_path)
+        make_dir(val_path)
+
+        for i in range(len(dataset[1])):
+            for j in range(len(dataset[1][0])):
+                try:
+                    image = np.array(f[dataset[1][i][j]]).transpose((2, 1, 0))
+                    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                    image = cv2.imencode('.jpg', image)[1].tostring()
+                    if len(dataset[1][0]) - j <= 100:
+                        filepath = os.path.join(val_path, '%04d_%02d.jpg' % (j - prev_id - 1, i))
+                    else:
+                        filepath = os.path.join(train_path, '%04d_%02d.jpg' % (j, i))
+                        prev_id = j
+                    with open(filepath, 'wb') as image_file:
+                        image_file.write(image)
+                    print("Processed image: {}".format(filepath))
+                except Exception as e:
+                    print("Error processing image {}, {}: {}".format(i, j, e))
+
+def get_pair(path, set, num_id, positive):
+    pair = []
+    if positive:
+        value = int(random.random() * num_id)
+        id = [value, value]
+    else:
+        while True:
+            id = [int(random.random() * num_id), int(random.random() * num_id)]
+            if id[0] != id[1]:
+                break
+
+    for i in range(2):
+        filepath = ''
+        while True:
+            index = int(random.random() * 10)
+            filepath = os.path.join(path, 'images_labeled', set, '%04d_%02d.jpg' % (id[i], index))
+            if not os.path.exists(filepath):
+                continue
+            break
+        pair.append(filepath)
+    return pair
+
+def get_num_id(path, set):
+    files = os.listdir(os.path.join(path, 'images_labeled', set))
+    files.sort()
+    return int(files[-1].split('_')[0]) - int(files[0].split('_')[0]) + 1
+
+def read_data(path, set, num_id, image_width, image_height, batch_size):
+    batch_images = []
+    labels = []
+    for i in range(batch_size // 2):
+        pairs = [get_pair(path, set, num_id, True), get_pair(path, set, num_id, False)]
+        for pair in pairs:
+            images = []
+            for p in pair:
+                image = cv2.imread(p)
+                image = cv2.resize(image, (image_width, image_height))
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                images.append(image)
+            batch_images.append(images)
+        labels.append([1., 0.])
+        labels.append([0., 1.])
+
+    return np.transpose(batch_images, (1, 0, 2, 3, 4)), np.array(labels)
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Usage: python cuhk03_dataset.py <path_to_dataset>")
+    else:
+        prepare_data(sys.argv[1])
+
