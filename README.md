@@ -14,3 +14,4 @@ https://github.com/ultralytics/ultralytics/issues/1915
 https://www.youtube.com/watch?v=UARbxLZV4Ws
 
 Dataset: https://www.kaggle.com/datasets/priyanagda/cuhk03?resource=download
+example: https://github.com/Nirvan101/Person-Re-identification/tree/master
