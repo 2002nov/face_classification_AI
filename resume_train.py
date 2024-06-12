@@ -1,3 +1,5 @@
+python train.py --gpu_ids 0 --name ft_ResNet50 --train_all --batchsize 32 --data_dir /media/lab_brownien/data1/Work_Student2024_V2/AI_train/Market/pytorch --resume_path runs/best.pt --num_epochs 50
+
 import os
 import torch
 import yaml
