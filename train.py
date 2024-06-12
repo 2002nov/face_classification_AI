@@ -4,7 +4,7 @@ import yaml
 from torch import nn, optim
 from shutil import copyfile
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms, models  # Added models import
+from torchvision import datasets, transforms, models
 from tqdm import tqdm
 import argparse
 
@@ -17,48 +17,75 @@ def parse_args():
     parser.add_argument('--batchsize', default=32, type=int, help='Batch size')
     parser.add_argument('--data_dir', default='data', type=str, help='Path to the data directory')
     parser.add_argument('--erasing_p', default=0.5, type=float, help='Probability of random erasing')
+    parser.add_argument('--resume_path', default='runs/best.pt', type=str, help='Path to the saved model to resume from')
+    parser.add_argument('--num_epochs', default=25, type=int, help='Number of epochs to train')
     return parser.parse_args()
 
 # Training function
-def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_sizes, num_epochs=25, use_gpu=False):
-    for epoch in range(num_epochs):
-        print("Epoch {}/{}".format(epoch, num_epochs - 1))
-        print('-' * 10)
+def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_sizes, num_epochs=25, start_epoch=0, use_gpu=False):
+    best_model_wts = None
+    best_acc = 0.0
 
-        for phase in ['train', 'val']:
-            if phase == 'train':
-                model.train()  # Set model to training mode
-            else:
-                model.eval()   # Set model to evaluate mode
+    try:
+        for epoch in range(start_epoch, num_epochs):
+            print(f"Epoch {epoch}/{num_epochs - 1}")
+            print('-' * 10)
 
-            running_loss = 0.0
-            running_corrects = 0
+            for phase in ['train', 'val']:
+                if phase == 'train':
+                    model.train()  # Set model to training mode
+                else:
+                    model.eval()   # Set model to evaluate mode
 
-            # Iterate over data
-            for inputs, labels in dataloaders[phase]:
-                if use_gpu:
-                    inputs = inputs.cuda()
-                    labels = labels.cuda()
+                running_loss = 0.0
+                running_corrects = 0
 
-                optimizer.zero_grad()
+                # Iterate over data
+                for inputs, labels in dataloaders[phase]:
+                    if use_gpu:
+                        inputs = inputs.cuda()
+                        labels = labels.cuda()
 
-                with torch.set_grad_enabled(phase == 'train'):
-                    outputs = model(inputs)
-                    _, preds = torch.max(outputs, 1)
-                    loss = criterion(outputs, labels)
+                    optimizer.zero_grad()
 
-                    if phase == 'train':
-                        loss.backward()
-                        optimizer.step()
+                    with torch.set_grad_enabled(phase == 'train'):
+                        outputs = model(inputs)
+                        _, preds = torch.max(outputs, 1)
+                        loss = criterion(outputs, labels)
 
-                now_batch_size = inputs.size(0)
-                running_loss += loss.item() * now_batch_size
-                running_corrects += float(torch.sum(preds == labels.data))
+                        if phase == 'train':
+                            loss.backward()
+                            optimizer.step()
 
-            epoch_loss = running_loss / dataset_sizes[phase]
-            epoch_acc = running_corrects / dataset_sizes[phase]
+                    now_batch_size = inputs.size(0)
+                    running_loss += loss.item() * now_batch_size
+                    running_corrects += float(torch.sum(preds == labels.data))
 
-            print("{} Loss: {:.4f} Acc: {:.4f}".format(phase, epoch_loss, epoch_acc))
+                epoch_loss = running_loss / dataset_sizes[phase]
+                epoch_acc = running_corrects / dataset_sizes[phase]
+
+                print(f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
+
+                # deep copy the model
+                if phase == 'val' and epoch_acc > best_acc:
+                    best_acc = epoch_acc
+                    best_model_wts = model.state_dict()
+
+            print()
+
+        print(f'Best val Acc: {best_acc:.4f}')
+
+        # load best model weights
+        if best_model_wts:
+            model.load_state_dict(best_model_wts)
+
+        # Save the best model
+        save_path = os.path.join('/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/models', 'best100.pt')
+        torch.save(model.state_dict(), save_path)
+        print(f'Best model saved to {save_path}')
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
     return model
 
@@ -118,6 +145,14 @@ if __name__ == '__main__':
 
     exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
+    # Load the best model if resuming
+    start_epoch = 0
+    if os.path.exists(opt.resume_path):
+        model_ft.load_state_dict(torch.load(opt.resume_path))
+        print(f'Resuming training from {opt.resume_path}')
+        # You might want to set start_epoch to the epoch you stopped at
+        # start_epoch = <last epoch> + 1
+
     # Train the model
-    model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler, dataloaders, dataset_sizes, num_epochs=25, use_gpu=use_gpu)
+    model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler, dataloaders, dataset_sizes, num_epochs=opt.num_epochs, start_epoch=start_epoch, use_gpu=use_gpu)
 
