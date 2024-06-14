@@ -19,3 +19,11 @@ example: https://github.com/Nirvan101/Person-Re-identification/tree/master
 
 new : https://github.com/layumi/Person_reID_baseline_pytorch/blob/master
 
+CCTV Link video : 
+https://www.youtube.com/watch?v=dGf--3so1FE
+https://www.youtube.com/watch?v=gFmcxl_67sM
+https://www.youtube.com/watch?v=KMJS66jBtVQ
+https://www.youtube.com/watch?v=5rkwqp6nnr4
+https://www.youtube.com/watch?v=4qAwH29Crt0
+
+
