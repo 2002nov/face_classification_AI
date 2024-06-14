@@ -20,11 +20,11 @@ from PIL import Image
 
 parser = argparse.ArgumentParser(description='Test')
 parser.add_argument('--gpu_ids', default='0', type=str, help='gpu_ids: e.g. 0  0,1,2  0,2')
-parser.add_argument('--test_dir', default='/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/Market', type=str, help='./test_data')
+parser.add_argument('--test_dir', default='/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/ReID/Market', type=str, help='./test_data')
 parser.add_argument('--name', default='best150', type=str, help='save model path')
 parser.add_argument('--batchsize', default=32, type=int, help='batchsize')
 parser.add_argument('--ms', default='1', type=str, help='multiple_scale: e.g. 1 1,1.1  1,1.1,1.2')
-parser.add_argument('--custom_model_path', default='/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/models/best150.pt', type=str, help='path to the custom model file')
+parser.add_argument('--custom_model_path', default='/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/ReID/models/best150.pt', type=str, help='path to the custom model file')
 
 opt = parser.parse_args()
 
@@ -160,7 +160,7 @@ def reid_and_save_images(query_feature, query_path):
     dist = torch.cdist(query_feature, query_feature)
     indices = torch.argmin(dist, dim=1)
 
-    output_dir = '/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/Market/reid_output3'
+    output_dir = '/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/ReID/Market/reid_output4'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
