@@ -9,7 +9,7 @@ import numpy as np
 detect_model = YOLO('/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/Work_Main/yolov8l-face.pt')
 
 # Open video file
-cap = cv.VideoCapture('/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/Work_Main/TestVideo/MultiPeople_Test1.mp4')
+cap = cv.VideoCapture('/media/lab_brownien/data1/Work_Student2024_V2/AI_train/Tang/Work_Main/TestVideo/Scale_test5.mp4')
 
 while cap.isOpened():
     face_counter = 0  # Counter for detected faces
