@@ -27,3 +27,5 @@ https://www.youtube.com/watch?v=5rkwqp6nnr4
 https://www.youtube.com/watch?v=4qAwH29Crt0
 
 https://drive.google.com/drive/folders/19UAkqTebnAHzpa4RtKrZ1BMJdN7Q7lsX
+
+https://pypi.org/project/labelme2yolo/
