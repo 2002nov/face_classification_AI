@@ -30,4 +30,4 @@ https://drive.google.com/drive/folders/19UAkqTebnAHzpa4RtKrZ1BMJdN7Q7lsX
 
 https://pypi.org/project/labelme2yolo/
 
-abelme2yolo --json_dir /path/to/labelme_json_dir/
+labelme2yolo --json_dir /path/to/labelme_json_dir/
